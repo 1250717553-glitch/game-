@@ -1,0 +1,32 @@
+# ===== 本项目专用 .gitignore =====
+
+# 调试残留（根目录截图，已另存到 docs/screenshots/world-map.jpg）
+/debug_screenshot.png
+*.screenshot.png
+
+# 构建输出（当前为空目录，仅占位）
+/build/*
+!/build/.gitkeep
+
+# 本地临时文件
+*.log
+*.tmp
+*.bak
+*.bak-*
+~$*
+预览图/
+临时/
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 依赖与运行产物（如果以后引入）
+node_modules/
+dist/
+.cache/

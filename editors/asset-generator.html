@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>修仙录 - 高质量水墨素材生成器</title>
+<style>
+body { font-family: 'KaiTi', serif; background: #1a1a1a; color: #f5f0e1; padding: 20px; }
+h1 { font-family: 'STXingkai', serif; color: #b8860b; text-align: center; letter-spacing: 4px; }
+.desc { text-align: center; color: #888; margin-bottom: 20px; }
+.controls { text-align: center; margin-bottom: 20px; }
+button { padding: 10px 25px; margin: 5px; background: #4a6741; border: 1px solid #5a7751; color: white; font-family: 'KaiTi', serif; font-size: 15px; cursor: pointer; border-radius: 4px; }
+button:hover { background: #5a7751; }
+.category { margin-bottom: 25px; background: rgba(40,40,40,0.8); padding: 15px; border-radius: 8px; border-left: 4px solid #b8860b; }
+.category h2 { color: #b8860b; margin-bottom: 12px; font-size: 18px; }
+.grid { display: flex; flex-wrap: wrap; gap: 15px; }
+.item { text-align: center; background: #2a2a2a; padding: 10px; border-radius: 6px; border: 1px solid #444; }
+.item canvas { display: block; margin: 0 auto 8px; background: #f5f0e1; border: 1px solid #555; border-radius: 4px; }
+.item .name { font-size: 13px; color: #ccc; }
+.item .dl { display: inline-block; margin-top: 5px; padding: 3px 12px; background: #3a6b8c; color: white; font-size: 11px; border-radius: 3px; cursor: pointer; text-decoration: none; }
+.progress { width: 80%; margin: 15px auto; height: 24px; background: #333; border-radius: 12px; overflow: hidden; display: none; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, #4a6741, #b8860b); width: 0%; transition: width 0.3s; }
+.progress-text { text-align: center; color: #888; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<h1>高质量水墨素材生成器</h1>
+<p class="desc">256×256 精细水墨风素材，带渐变、阴影、纹理、晕染效果</p>
+<div class="controls">
+    <button onclick="generateAll()">🎨 一键生成全部素材</button>
+    <button onclick="downloadAll()">📦 下载全部PNG</button>
+</div>
+<div class="progress" id="progress"><div class="progress-bar" id="progressBar"></div></div>
+<div class="progress-text" id="progressText"></div>
+<div id="container"></div>
+
+<script>
+const SIZE = 256;
+const generated = {};
+
+// 水墨颜色
+const C = {
+    paper: '#f5f0e1', paperDark: '#e8e0d0',
+    ink: '#2c2c2c', inkDark: '#1a1a1a', inkMid: '#5a5a5a', inkLight: '#8b8680',
+    cinnabar: '#c44536', cinnabarDark: '#8b2020',
+    ochre: '#b8860b', ochreLight: '#c9a84c',
+    green: '#4a6741', greenLight: '#6b8c5a', greenDark: '#2d4a2a',
+    blue: '#3a6b8c', blueLight: '#5a8bac',
+    earth: '#8b5a2b', earthLight: '#a67c4a', earthDark: '#5a3a1b',
+    white: '#f0ebe0', snow: '#e8eef5'
+};
+
+// 宣纸底色
+function paper(ctx) {
+    ctx.fillStyle = C.paper;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // 纸纹
+    for (let i = 0; i < 40; i++) {
+        ctx.fillStyle = `rgba(139,134,128,${Math.random()*0.05})`;
+        ctx.beginPath();
+        ctx.arc(Math.random()*SIZE, Math.random()*SIZE, Math.random()*40+15, 0, Math.PI*2);
+        ctx.fill();
+    }
+}
+
+// 晕染
+function wash(ctx, x, y, r, color, alpha) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color + Math.floor(alpha*255).toString(16).padStart(2,'0'));
+    g.addColorStop(1, color + '00');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fill();
+}
+
+// ===== 地形 =====
+
+function genGrass(ctx) {
+    paper(ctx);
+    // 底色渐变
+    const g = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+    g.addColorStop(0, '#7a9c5a');
+    g.addColorStop(0.5, '#6b8c5a');
+    g.addColorStop(1, '#5a7c4a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // 晕染
+    wash(ctx, 60, 60, 80, '#4a6741', 0.3);
+    wash(ctx, 180, 150, 70, '#8bac6a', 0.25);
+    wash(ctx, 120, 200, 60, '#3a5731', 0.2);
+    // 草叶
+    ctx.strokeStyle = '#2d4a2a';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 80; i++) {
+        const x = Math.random()*SIZE, y = Math.random()*SIZE;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x+(Math.random()-0.5)*8, y-8, x+(Math.random()-0.5)*6, y-12-Math.random()*8);
+        ctx.stroke();
+    }
+    // 草丛
+    for (let i = 0; i < 8; i++) {
+        const x = Math.random()*SIZE, y = Math.random()*SIZE;
+        ctx.fillStyle = `rgba(45,74,42,${0.3+Math.random()*0.2})`;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 12+Math.random()*8, 6+Math.random()*4, Math.random()*Math.PI, 0, Math.PI*2);
+        ctx.fill();
+    }
+}
+
+function genForest(ctx) {
+    paper(ctx);
+    // 深绿底色
+    const g = ctx.createLinearGradient(0, 0, 0, SIZE);
+    g.addColorStop(0, '#3a5731');
+    g.addColorStop(1, '#1a3711');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // 远景树
+    for (let i = 0; i < 15; i++) {
+        const x = Math.random()*SIZE, y = Math.random()*SIZE*0.6;
+        wash(ctx, x, y, 30+Math.random()*20, '#1a3711', 0.4);
+    }
+    // 近景树
+    for (let i = 0; i < 8; i++) {
+        const x = 20+Math.random()*(SIZE-40), y = 40+Math.random()*(SIZE-60);
+        // 树干
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(x-4, y, 8, 30+Math.random()*20);
+        // 树冠（多层）
+        wash(ctx, x, y-10, 25+Math.random()*10, '#2d4a2a', 0.7);
+        wash(ctx, x-8, y-5, 18, '#3a5731', 0.6);
+        wash(ctx, x+8, y-8, 16, '#4a6741', 0.5);
+    }
+    // 雾气
+    wash(ctx, 128, 80, 100, '#8b9c8b', 0.15);
+    wash(ctx, 60, 180, 80, '#8b9c8b', 0.12);
+}
+
+function genMountain(ctx) {
+    paper(ctx);
+    // 天空渐变
+    const sky = ctx.createLinearGradient(0, 0, 0, SIZE);
+    sky.addColorStop(0, '#d5d0c0');
+    sky.addColorStop(0.4, '#c5c0b0');
+    sky.addColorStop(1, '#a5a090');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // 远山（淡墨）
+    ctx.fillStyle = 'rgba(120,120,120,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(0, 120);
+    ctx.lineTo(40, 70); ctx.lineTo(70, 90); ctx.lineTo(110, 50);
+    ctx.lineTo(150, 80); ctx.lineTo(190, 45); ctx.lineTo(230, 75);
+    ctx.lineTo(SIZE, 60); ctx.lineTo(SIZE, SIZE); ctx.lineTo(0, SIZE);
+    ctx.fill();
+    // 中山
+    ctx.fillStyle = 'rgba(80,80,80,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(0, 160);
+    ctx.lineTo(30, 110); ctx.lineTo(60, 135); ctx.lineTo(100, 95);
+    ctx.lineTo(140, 125); ctx.lineTo(180, 100); ctx.lineTo(220, 130);
+    ctx.lineTo(SIZE, 115); ctx.lineTo(SIZE, SIZE); ctx.lineTo(0, SIZE);
+    ctx.fill();
+    // 近山（浓墨）
+    ctx.fillStyle = 'rgba(50,50,50,0.75)';
+    ctx.beginPath();
+    ctx.moveTo(0, 200);
+    ctx.lineTo(25, 155); ctx.lineTo(55, 180); ctx.lineTo(90, 145);
+    ctx.lineTo(130, 175); ctx.lineTo(170, 150); ctx.lineTo(210, 178);
+    ctx.lineTo(SIZE, 160); ctx.lineTo(SIZE, SIZE); ctx.lineTo(0, SIZE);
+    ctx.fill();
+    // 雪顶
+    ctx.fillStyle = 'rgba(245,240,225,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(95, 52); ctx.lineTo(110, 50); ctx.lineTo(105, 58);
+    ctx.lineTo(100, 55); ctx.lineTo(97, 60); ctx.fill();
+    // 云雾
+    wash(ctx, 80, 130, 50, '#d5d0c0', 0.4);
+    wash(ctx, 170, 150, 45, '#d5d0c0', 0.35);
+}
+
+function genWater(ctx) {
+    paper(ctx);
+    // 水面渐变
+    const g = ctx.createLinearGradient(0, 0, 0, SIZE);
+    g.addColorStop(0, '#5a8bac');
+    g.addColorStop(0.5, '#3a6b8c');
+    g.addColorStop(1, '#2a4b6c');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // 水波纹
+    for (let row = 0; row < 12; row++) {
+        const y = 15 + row * 20;
+        ctx.strokeStyle = `rgba(200,220,240,${0.2+Math.random()*0.2})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let x = 0; x <= SIZE; x += 8) {
+            const wave = Math.sin(x * 0.08 + row * 0.7) * 4;
+            if (x === 0) ctx.moveTo(x, y + wave);
+            else ctx.lineTo(x, y + wave);
+        }
+        ctx.stroke();
+    }
+    // 深水区
+    wash(ctx, 50, 200, 60, '#1a3b5c', 0.4);
+    wash(ctx, 200, 60, 50, '#1a3b5c', 0.3);
+    // 反光
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    for (let i = 0; i < 12; i++) {
+        ctx.fillRect(Math.random()*200+20, Math.random()*200+20, 20+Math.random()*15, 1.5);
+    }
+    // 岸边
+    ctx.fillStyle = 'rgba(139,90,43,0.5)';
+    ctx.fillRect(0, 0, SIZE, 8);
+    ctx.fillRect(0, SIZE-8, SIZE, 8);
+}
+
+function genSand(ctx) {
+    paper(ctx);
+    // 沙地渐变
+    const g = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+    g.addColorStop(0, '#d9c48a');
+    g.addColorStop(0.5, '#c9a84c');
+    g.addColorStop(1, '#b8983c');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // 沙粒
+    for (let i = 0; i < 120; i++) {
+        ctx.fillStyle = `rgba(${139+Math.random()*40},${90+Math.random()*40},${43+Math.random()*30},${0.2+Math.random()*0.3})`;
+        ctx.beginPath();
+        ctx.arc(Math.random()*SIZE, Math.random()*SIZE, Math.random()*2+0.5, 0, Math.PI*2);
+        ctx.fill();
+    }
+    // 沙丘纹理
+    ctx.strokeStyle = 'rgba(139,90,43,0.35)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 40+i*35);
+        ctx.quadraticCurveTo(80, 30+i*35+Math.random()*15, 160, 45+i*35);
+        ctx.quadraticCurveTo(200, 50+i*35, SIZE, 38+i*35);
+        ctx.stroke();
+    }
+    // 赭石晕染
+    wash(ctx, 180, 180, 60, '#b87020', 0.2);
+    wash(ctx, 60, 80, 50, '#a86010', 0.15);
+}
+
+function genSnow(ctx) {
+    paper(ctx);
+    // 雪地渐变
+    const g = ctx.createLinearGradient(0, 0, 0, SIZE);
+    g.addColorStop(0, '#f0f4f8');
+    g.addColorStop(0.5, '#e0e8f0');
+    g.addColorStop(1, '#d0d8e8');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // 雪堆
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.ellipse(70, 210, 55, 22, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(180, 200, 45, 18, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(130, 225, 40, 15, 0, 0, Math.PI*2); ctx.fill();
+    // 阴影
+    ctx.fillStyle = 'rgba(150,170,200,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(75, 218, 45, 12, 0, 0, Math.PI*2); ctx.fill();
+    // 雪花
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    for (let i = 0; i < 50; i++) {
+        ctx.beginPath();
+        ctx.arc(Math.random()*SIZE, Math.random()*SIZE, Math.random()*2.5+0.5, 0, Math.PI*2);
+        ctx.fill();
+    }
+    // 枯枝
+    ctx.strokeStyle = 'rgba(60,60,60,0.6)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(200, 195); ctx.lineTo(205, 130);
+    ctx.moveTo(205, 155); ctx.lineTo(190, 140);
+    ctx.moveTo(205, 145); ctx.lineTo(220, 130);
+    ctx.stroke();
+    // 淡蓝阴影
+    wash(ctx, 50, 50, 60, '#a0b8d8', 0.15);
+}
+
+// ===== 建筑 =====
+
+function genSect(ctx) {
+    paper(ctx);
+    // 台阶
+    ctx.fillStyle = '#9a8a7a';
+    ctx.fillRect(30, 210, 196, 18);
+    ctx.fillStyle = '#aa9a8a';
+    ctx.fillRect(45, 195, 166, 15);
+    ctx.fillStyle = '#baaa9a';
+    ctx.fillRect(58, 182, 140, 13);
+    // 墙体
+    const wallG = ctx.createLinearGradient(0, 100, 0, 182);
+    wallG.addColorStop(0, '#d45546');
+    wallG.addColorStop(1, '#a43526');
+    ctx.fillStyle = wallG;
+    ctx.fillRect(58, 100, 140, 82);
+    // 墙线
+    ctx.strokeStyle = 'rgba(100,30,20,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(58, 100, 140, 82);
+    // 门
+    const doorG = ctx.createLinearGradient(0, 135, 0, 182);
+    doorG.addColorStop(0, '#5a3015');
+    doorG.addColorStop(1, '#3a1a05');
+    ctx.fillStyle = doorG;
+    ctx.fillRect(108, 135, 40, 47);
+    ctx.strokeStyle = '#2a1005';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(108, 135, 40, 47);
+    // 门钉
+    ctx.fillStyle = '#c9a84c';
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) {
+        ctx.beginPath();
+        ctx.arc(118+c*20, 145+r*12, 2, 0, Math.PI*2); ctx.fill();
+    }
+    // 屋顶
+    const roofG = ctx.createLinearGradient(0, 40, 0, 100);
+    roofG.addColorStop(0, '#4a4a4a');
+    roofG.addColorStop(1, '#2a2a2a');
+    ctx.fillStyle = roofG;
+    ctx.beginPath();
+    ctx.moveTo(35, 100);
+    ctx.lineTo(128, 38);
+    ctx.lineTo(221, 100);
+    ctx.lineTo(210, 105);
+    ctx.lineTo(128, 48);
+    ctx.lineTo(46, 105);
+    ctx.fill();
+    // 飞檐
+    ctx.fillStyle = '#b8860b';
+    ctx.beginPath();
+    ctx.moveTo(35, 100); ctx.lineTo(25, 88); ctx.lineTo(45, 100); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(221, 100); ctx.lineTo(231, 88); ctx.lineTo(211, 100); ctx.fill();
+    // 屋脊兽
+    ctx.fillStyle = '#c9a84c';
+    ctx.beginPath();
+    ctx.arc(128, 42, 5, 0, Math.PI*2); ctx.fill();
+    // 牌匾
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(98, 82, 60, 20);
+    ctx.strokeStyle = '#b8860b';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(98, 82, 60, 20);
+    ctx.fillStyle = '#c9a84c';
+    ctx.font = 'bold 14px KaiTi';
+    ctx.textAlign = 'center';
+    ctx.fillText('青云宗', 128, 97);
+    // 灯笼
+    for (const lx of [75, 181]) {
+        const lg = ctx.createRadialGradient(lx, 115, 2, lx, 115, 10);
+        lg.addColorStop(0, '#ffaa44');
+        lg.addColorStop(1, '#c44536');
+        ctx.fillStyle = lg;
+        ctx.beginPath();
+        ctx.ellipse(lx, 115, 8, 10, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#5a3015';
+        ctx.fillRect(lx-4, 104, 8, 3);
+        ctx.fillRect(lx-4, 122, 8, 3);
+    }
+    // 柱子
+    ctx.fillStyle = '#8b2020';
+    ctx.fillRect(65, 100, 6, 82);
+    ctx.fillRect(185, 100, 6, 82);
+}
+
+function genHouse(ctx) {
+    paper(ctx);
+    // 地基
+    ctx.fillStyle = '#9a8a7a';
+    ctx.fillRect(35, 205, 186, 15);
+    // 墙体
+    const wallG = ctx.createLinearGradient(0, 95, 0, 205);
+    wallG.addColorStop(0, '#e8d5b7');
+    wallG.addColorStop(1, '#d8c5a7');
+    ctx.fillStyle = wallG;
+    ctx.fillRect(45, 95, 166, 110);
+    ctx.strokeStyle = 'rgba(100,80,60,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(45, 95, 166, 110);
+    // 屋顶
+    const roofG = ctx.createLinearGradient(0, 40, 0, 95);
+    roofG.addColorStop(0, '#6a6a6a');
+    roofG.addColorStop(1, '#4a4a4a');
+    ctx.fillStyle = roofG;
+    ctx.beginPath();
+    ctx.moveTo(30, 95);
+    ctx.lineTo(128, 42);
+    ctx.lineTo(226, 95);
+    ctx.fill();
+    // 屋顶纹理
+    ctx.strokeStyle = 'rgba(30,30,30,0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.moveTo(45+i*22, 88);
+        ctx.lineTo(128, 48);
+        ctx.stroke();
+    }
+    // 屋脊
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(118, 38, 20, 8);
+    // 门
+    ctx.fillStyle = '#5a3015';
+    ctx.fillRect(108, 145, 40, 60);
+    ctx.strokeStyle = '#3a1a05';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(108, 145, 40, 60);
+    // 门把手
+    ctx.fillStyle = '#c9a84c';
+    ctx.beginPath();
+    ctx.arc(122, 175, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(134, 175, 3, 0, Math.PI*2); ctx.fill();
+    // 窗户
+    for (const wx of [65, 175]) {
+        ctx.fillStyle = 'rgba(150,180,200,0.7)';
+        ctx.fillRect(wx, 120, 28, 28);
+        ctx.strokeStyle = '#5a3015';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(wx, 120, 28, 28);
+        // 窗格
+        ctx.beginPath();
+        ctx.moveTo(wx+14, 120); ctx.lineTo(wx+14, 148);
+        ctx.moveTo(wx, 134); ctx.lineTo(wx+28, 134);
+        ctx.stroke();
+    }
+    // 飞檐
+    ctx.fillStyle = '#8b7355';
+    ctx.beginPath();
+    ctx.moveTo(30, 95); ctx.lineTo(22, 85); ctx.lineTo(38, 95); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(226, 95); ctx.lineTo(234, 85); ctx.lineTo(218, 95); ctx.fill();
+}
+
+function genFarm(ctx) {
+    paper(ctx);
+    // 田地底色
+    const g = ctx.createLinearGradient(0, 0, 0, SIZE);
+    g.addColorStop(0, '#9b6a3b');
+    g.addColorStop(1, '#7b4a1b');
+    ctx.fillStyle = g;
+    ctx.fillRect(15, 15, 226, 226);
+    // 田垄
+    ctx.strokeStyle = '#5a3a1b';
+    ctx.lineWidth = 3;
+    for (let i = 0; i <= 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(15, 15+i*45.2);
+        ctx.lineTo(241, 15+i*45.2);
+        ctx.stroke();
+    }
+    for (let i = 0; i <= 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(15+i*56.5, 15);
+        ctx.lineTo(15+i*56.5, 241);
+        ctx.stroke();
+    }
+    // 禾苗
+    ctx.strokeStyle = '#4a7c31';
+    ctx.lineWidth = 2;
+    for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 4; col++) {
+            const x = 43 + col * 56.5;
+            const y = 38 + row * 45.2;
+            ctx.beginPath();
+            ctx.moveTo(x, y+12); ctx.lineTo(x-5, y);
+            ctx.moveTo(x, y+12); ctx.lineTo(x+5, y);
+            ctx.moveTo(x, y+12); ctx.lineTo(x, y-4);
+            ctx.stroke();
+        }
+    }
+    // 田埂
+    ctx.fillStyle = '#6b4a2b';
+    ctx.fillRect(10, 10, 236, 6);
+    ctx.fillRect(10, 240, 236, 6);
+    ctx.fillRect(10, 10, 6, 236);
+    ctx.fillRect(240, 10, 6, 236);
+    // 土块纹理
+    for (let i = 0; i < 30; i++) {
+        ctx.fillStyle = `rgba(90,58,27,${0.2+Math.random()*0.2})`;
+        ctx.beginPath();
+        ctx.arc(25+Math.random()*206, 25+Math.random()*206, Math.random()*3+1, 0, Math.PI*2);
+        ctx.fill();
+    }
+}
+
+function genAltar(ctx) {
+    paper(ctx);
+    // 地面阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(128, 225, 90, 18, 0, 0, Math.PI*2); ctx.fill();
+    // 底座
+    const baseG = ctx.createLinearGradient(0, 195, 0, 225);
+    baseG.addColorStop(0, '#9a9a9a');
+    baseG.addColorStop(1, '#7a7a7a');
+    ctx.fillStyle = baseG;
+    ctx.beginPath();
+    ctx.ellipse(128, 210, 85, 18, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(43, 192, 170, 18);
+    // 中层
+    const midG = ctx.createLinearGradient(0, 165, 0, 195);
+    midG.addColorStop(0, '#aaaaaa');
+    midG.addColorStop(1, '#8a8a8a');
+    ctx.fillStyle = midG;
+    ctx.beginPath();
+    ctx.ellipse(128, 175, 70, 15, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(58, 160, 140, 15);
+    // 上层台面
+    const topG = ctx.createLinearGradient(0, 135, 0, 160);
+    topG.addColorStop(0, '#bababa');
+    topG.addColorStop(1, '#9a9a9a');
+    ctx.fillStyle = topG;
+    ctx.beginPath();
+    ctx.ellipse(128, 145, 55, 12, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(73, 133, 110, 12);
+    // 八卦纹
+    ctx.strokeStyle = '#c44536';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(128, 139, 28, 0, Math.PI*2); ctx.stroke();
+    // 太极
+    ctx.fillStyle = '#2a2a2a';
+    ctx.beginPath();
+    ctx.arc(128, 139, 14, Math.PI*0.5, Math.PI*1.5); ctx.fill();
+    ctx.fillStyle = '#f0ebe0';
+    ctx.beginPath();
+    ctx.arc(128, 139, 14, Math.PI*1.5, Math.PI*0.5); ctx.fill();
+    ctx.fillStyle = '#2a2a2a';
+    ctx.beginPath(); ctx.arc(128, 132, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#f0ebe0';
+    ctx.beginPath(); ctx.arc(128, 146, 4, 0, Math.PI*2); ctx.fill();
+    // 八卦符号
+    ctx.strokeStyle = '#c44536';
+    ctx.lineWidth = 2;
+    const angles = [0, 45, 90, 135, 180, 225, 270, 315];
+    angles.forEach(a => {
+        const rad = a * Math.PI / 180;
+        const x1 = 128 + Math.cos(rad) * 18;
+        const y1 = 139 + Math.sin(rad) * 18;
+        const x2 = 128 + Math.cos(rad) * 26;
+        const y2 = 139 + Math.sin(rad) * 26;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+        ctx.stroke();
+    });
+    // 光晕
+    wash(ctx, 128, 139, 60, '#b8860b', 0.15);
+    // 石阶纹理
+    ctx.strokeStyle = 'rgba(80,80,80,0.4)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.moveTo(55+i*22, 145); ctx.lineTo(55+i*22, 210);
+        ctx.stroke();
+    }
+}
+
+function genMarket(ctx) {
+    paper(ctx);
+    // 地面
+    ctx.fillStyle = '#b8a888';
+    ctx.fillRect(0, 200, SIZE, 56);
+    // 店铺主体
+    const wallG = ctx.createLinearGradient(0, 80, 0, 200);
+    wallG.addColorStop(0, '#c89860');
+    wallG.addColorStop(1, '#a87840');
+    ctx.fillStyle = wallG;
+    ctx.fillRect(35, 80, 186, 120);
+    // 屋顶
+    ctx.fillStyle = '#4a4a4a';
+    ctx.beginPath();
+    ctx.moveTo(20, 80); ctx.lineTo(128, 30); ctx.lineTo(236, 80); ctx.fill();
+    // 屋檐
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(25, 75, 206, 10);
+    // 幌子
+    ctx.fillStyle = '#c44536';
+    ctx.fillRect(110, 5, 36, 45);
+    ctx.strokeStyle = '#8b2020';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(110, 5, 36, 45);
+    ctx.fillStyle = '#f5f0e1';
+    ctx.font = 'bold 16px KaiTi';
+    ctx.textAlign = 'center';
+    ctx.fillText('坊', 128, 25);
+    ctx.fillText('市', 128, 43);
+    // 幌杆
+    ctx.strokeStyle = '#5a3015';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(128, 50); ctx.lineTo(128, 75);
+    ctx.stroke();
+    // 柜台
+    ctx.fillStyle = '#7a5030';
+    ctx.fillRect(45, 155, 166, 45);
+    ctx.strokeStyle = '#5a3015';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(45, 155, 166, 45);
+    // 商品
+    const items = [
+        { x: 60, color: '#c9a84c', name: '💎' },
+        { x: 90, color: '#4a6741', name: '🌿' },
+        { x: 120, color: '#3a6b8c', name: '🧪' },
+        { x: 150, color: '#c44536', name: '📜' },
+        { x: 180, color: '#8b5a2b', name: '🍶' }
+    ];
+    items.forEach(item => {
+        ctx.fillStyle = item.color;
+        ctx.fillRect(item.x, 140, 18, 18);
+        ctx.strokeStyle = '#3a3a3a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(item.x, 140, 18, 18);
+    });
+    // 门
+    ctx.fillStyle = '#5a3015';
+    ctx.fillRect(108, 175, 40, 25);
+    // 柱子
+    ctx.fillStyle = '#8b2020';
+    ctx.fillRect(40, 80, 8, 120);
+    ctx.fillRect(208, 80, 8, 120);
+    // 灯笼
+    for (const lx of [60, 196]) {
+        const lg = ctx.createRadialGradient(lx, 95, 2, lx, 95, 12);
+        lg.addColorStop(0, '#ffaa44');
+        lg.addColorStop(1, '#c44536');
+        ctx.fillStyle = lg;
+        ctx.beginPath();
+        ctx.ellipse(lx, 95, 9, 12, 0, 0, Math.PI*2); ctx.fill();
+    }
+}
+
+function genTower(ctx) {
+    paper(ctx);
+    // 地面
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(128, 235, 60, 12, 0, 0, Math.PI*2); ctx.fill();
+    // 塔基
+    ctx.fillStyle = '#8a8a8a';
+    ctx.fillRect(88, 215, 80, 20);
+    // 三层塔身
+    const layers = [
+        { y: 175, h: 40, w: 72, color: '#c8b898' },
+        { y: 130, h: 45, w: 60, color: '#d8c8a8' },
+        { y: 85, h: 45, w: 48, color: '#e8d8b8' }
+    ];
+    layers.forEach((layer, i) => {
+        const x = 128 - layer.w/2;
+        // 墙
+        ctx.fillStyle = layer.color;
+        ctx.fillRect(x, layer.y, layer.w, layer.h);
+        ctx.strokeStyle = 'rgba(100,80,60,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, layer.y, layer.w, layer.h);
+        // 窗
+        ctx.fillStyle = 'rgba(40,40,40,0.7)';
+        ctx.fillRect(128-6, layer.y+12, 12, 16);
+        // 飞檐屋顶
+        ctx.fillStyle = '#4a4a4a';
+        ctx.beginPath();
+        ctx.moveTo(x-10, layer.y);
+        ctx.lineTo(128, layer.y-15);
+        ctx.lineTo(x+layer.w+10, layer.y);
+        ctx.fill();
+        // 翘角
+        ctx.fillStyle = '#b8860b';
+        ctx.beginPath();
+        ctx.moveTo(x-10, layer.y); ctx.lineTo(x-16, layer.y-8); ctx.lineTo(x-6, layer.y); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x+layer.w+10, layer.y); ctx.lineTo(x+layer.w+16, layer.y-8); ctx.lineTo(x+layer.w+6, layer.y); ctx.fill();
+    });
+    // 塔顶
+    ctx.fillStyle = '#b8860b';
+    ctx.beginPath();
+    ctx.moveTo(112, 85); ctx.lineTo(128, 50); ctx.lineTo(144, 85); ctx.fill();
+    // 塔尖
+    ctx.fillStyle = '#c44536';
+    ctx.beginPath();
+    ctx.arc(128, 45, 5, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#c44536';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(128, 40); ctx.lineTo(128, 25);
+    ctx.stroke();
+    // 铃铛
+    ctx.strokeStyle = '#b8860b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(100, 78); ctx.lineTo(97, 88);
+    ctx.moveTo(156, 78); ctx.lineTo(159, 88);
+    ctx.stroke();
+    ctx.fillStyle = '#c9a84c';
+    ctx.beginPath(); ctx.arc(97, 90, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(159, 90, 3, 0, Math.PI*2); ctx.fill();
+}
+
+// ===== 装饰 =====
+
+function genTree(ctx) {
+    paper(ctx);
+    // 地面阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(128, 230, 60, 12, 0, 0, Math.PI*2); ctx.fill();
+    // 树干
+    const trunkG = ctx.createLinearGradient(100, 0, 156, 0);
+    trunkG.addColorStop(0, '#4a2f18');
+    trunkG.addColorStop(0.5, '#6b4423');
+    trunkG.addColorStop(1, '#3a1f08');
+    ctx.fillStyle = trunkG;
+    ctx.beginPath();
+    ctx.moveTo(112, 230);
+    ctx.lineTo(116, 100);
+    ctx.lineTo(140, 100);
+    ctx.lineTo(144, 230);
+    ctx.fill();
+    // 树干纹理
+    ctx.strokeStyle = 'rgba(40,25,10,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(120, 220); ctx.lineTo(122, 120);
+    ctx.moveTo(132, 215); ctx.lineTo(130, 130);
+    ctx.stroke();
+    // 树枝
+    ctx.strokeStyle = '#4a2f18';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(128, 130); ctx.lineTo(75, 80);
+    ctx.moveTo(128, 120); ctx.lineTo(185, 65);
+    ctx.moveTo(128, 145); ctx.lineTo(65, 110);
+    ctx.moveTo(128, 110); ctx.lineTo(170, 85);
+    ctx.stroke();
+    // 细枝
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(75, 80); ctx.lineTo(55, 60);
+    ctx.moveTo(75, 80); ctx.lineTo(65, 55);
+    ctx.moveTo(185, 65); ctx.lineTo(205, 45);
+    ctx.moveTo(185, 65); ctx.lineTo(195, 40);
+    ctx.stroke();
+    // 树冠（多层晕染）
+    wash(ctx, 85, 65, 50, '#2d4a2a', 0.7);
+    wash(ctx, 165, 55, 48, '#3a5731', 0.7);
+    wash(ctx, 128, 80, 45, '#2d4a2a', 0.6);
+    wash(ctx, 60, 90, 35, '#3a5731', 0.55);
+    wash(ctx, 190, 85, 32, '#4a6741', 0.5);
+    wash(ctx, 110, 50, 30, '#4a6741', 0.45);
+    // 树叶细节
+    ctx.fillStyle = 'rgba(25,50,23,0.6)';
+    for (let i = 0; i < 40; i++) {
+        ctx.beginPath();
+        ctx.arc(50+Math.random()*160, 30+Math.random()*80, Math.random()*4+1.5, 0, Math.PI*2);
+        ctx.fill();
+    }
+    // 高光
+    ctx.fillStyle = 'rgba(107,140,90,0.4)';
+    for (let i = 0; i < 15; i++) {
+        ctx.beginPath();
+        ctx.arc(60+Math.random()*140, 35+Math.random()*50, Math.random()*3+1, 0, Math.PI*2);
+        ctx.fill();
+    }
+}
+
+function genFlower(ctx) {
+    paper(ctx);
+    // 茎
+    ctx.strokeStyle = '#4a6741';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(128, 240);
+    ctx.quadraticCurveTo(115, 170, 128, 110);
+    ctx.stroke();
+    // 叶子
+    ctx.fillStyle = '#5a7c51';
+    ctx.beginPath();
+    ctx.ellipse(95, 165, 22, 10, -0.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#4a6741';
+    ctx.beginPath();
+    ctx.ellipse(160, 145, 20, 9, 0.5, 0, Math.PI*2); ctx.fill();
+    // 叶脉
+    ctx.strokeStyle = '#3a5731';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(78, 168); ctx.lineTo(112, 162);
+    ctx.moveTo(142, 147); ctx.lineTo(178, 143);
+    ctx.stroke();
+    // 花瓣（5片，渐变）
+    const petalColors = ['#e85a4a', '#d44536', '#c43526', '#e86050', '#d44a3a'];
+    for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2 - Math.PI/2;
+        const px = 128 + Math.cos(angle) * 35;
+        const py = 85 + Math.sin(angle) * 35;
+        const pg = ctx.createRadialGradient(px, py, 5, px, py, 28);
+        pg.addColorStop(0, petalColors[i]);
+        pg.addColorStop(1, '#a42516');
+        ctx.fillStyle = pg;
+        ctx.beginPath();
+        ctx.ellipse(px, py, 22, 30, angle, 0, Math.PI*2);
+        ctx.fill();
+        // 花瓣纹理
+        ctx.strokeStyle = 'rgba(139,32,32,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(128 + Math.cos(angle)*15, 85 + Math.sin(angle)*15);
+        ctx.lineTo(128 + Math.cos(angle)*45, 85 + Math.sin(angle)*45);
+        ctx.stroke();
+    }
+    // 花心
+    const centerG = ctx.createRadialGradient(128, 85, 2, 128, 85, 18);
+    centerG.addColorStop(0, '#ffdd44');
+    centerG.addColorStop(1, '#b8860b');
+    ctx.fillStyle = centerG;
+    ctx.beginPath();
+    ctx.arc(128, 85, 18, 0, Math.PI*2); ctx.fill();
+    // 花蕊
+    ctx.fillStyle = '#8b5a0b';
+    for (let i = 0; i < 10; i++) {
+        const angle = (i / 10) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(128 + Math.cos(angle)*8, 85 + Math.sin(angle)*8, 2, 0, Math.PI*2);
+        ctx.fill();
+    }
+    // 光晕
+    wash(ctx, 128, 85, 70, '#c44536', 0.12);
+}
+
+function genRock(ctx) {
+    paper(ctx);
+    // 地面阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(128, 220, 75, 15, 0, 0, Math.PI*2); ctx.fill();
+    // 灵石主体
+    const rockG = ctx.createLinearGradient(60, 50, 180, 200);
+    rockG.addColorStop(0, '#7aa0d0');
+    rockG.addColorStop(0.3, '#5a80b0');
+    rockG.addColorStop(0.7, '#3a6090');
+    rockG.addColorStop(1, '#2a4070');
+    ctx.fillStyle = rockG;
+    ctx.beginPath();
+    ctx.moveTo(70, 210);
+    ctx.lineTo(55, 140);
+    ctx.lineTo(75, 70);
+    ctx.lineTo(115, 45);
+    ctx.lineTo(155, 55);
+    ctx.lineTo(185, 90);
+    ctx.lineTo(195, 150);
+    ctx.lineTo(180, 210);
+    ctx.closePath();
+    ctx.fill();
+    // 轮廓
+    ctx.strokeStyle = '#1a3050';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    // 亮面
+    ctx.fillStyle = 'rgba(150,190,230,0.4)';
+    ctx.beginPath();
+    ctx.moveTo(75, 70);
+    ctx.lineTo(115, 45);
+    ctx.lineTo(140, 60);
+    ctx.lineTo(100, 80);
+    ctx.closePath();
+    ctx.fill();
+    // 暗面
+    ctx.fillStyle = 'rgba(20,40,70,0.4)';
+    ctx.beginPath();
+    ctx.moveTo(155, 55);
+    ctx.lineTo(185, 90);
+    ctx.lineTo(195, 150);
+    ctx.lineTo(180, 210);
+    ctx.lineTo(160, 200);
+    ctx.lineTo(170, 140);
+    ctx.lineTo(150, 90);
+    ctx.closePath();
+    ctx.fill();
+    // 裂纹
+    ctx.strokeStyle = 'rgba(20,40,70,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(90, 100); ctx.lineTo(100, 140); ctx.lineTo(90, 180);
+    ctx.moveTo(140, 80); ctx.lineTo(135, 120); ctx.lineTo(145, 160);
+    ctx.stroke();
+    // 发光纹理
+    ctx.strokeStyle = 'rgba(150,200,255,0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(100, 110); ctx.lineTo(110, 130); ctx.lineTo(105, 155);
+    ctx.stroke();
+    // 光晕
+    wash(ctx, 128, 130, 80, '#5a8bac', 0.2);
+    wash(ctx, 110, 100, 40, '#7aa0d0', 0.15);
+    // 光点
+    ctx.fillStyle = 'rgba(200,230,255,0.9)';
+    for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.arc(70+Math.random()*110, 60+Math.random()*130, Math.random()*2+0.5, 0, Math.PI*2);
+        ctx.fill();
+    }
+}
+
+function genCloud(ctx) {
+    paper(ctx);
+    // 多层云
+    const cloudLayers = [
+        { x: 128, y: 140, w: 120, h: 35, color: 'rgba(220,225,230,0.95)' },
+        { x: 90, y: 115, w: 65, h: 30, color: 'rgba(235,240,245,0.95)' },
+        { x: 165, y: 110, w: 70, h: 32, color: 'rgba(230,235,240,0.95)' },
+        { x: 115, y: 90, w: 55, h: 25, color: 'rgba(245,248,250,0.95)' },
+        { x: 150, y: 85, w: 45, h: 22, color: 'rgba(240,245,248,0.95)' }
+    ];
+    cloudLayers.forEach(c => {
+        ctx.fillStyle = c.color;
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, c.w/2, c.h/2, 0, 0, Math.PI*2);
+        ctx.fill();
+    });
+    // 云纹卷曲
+    ctx.strokeStyle = 'rgba(180,190,200,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(70, 130, 15, 0, Math.PI*1.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(185, 125, 13, Math.PI*0.5, Math.PI*2);
+    ctx.stroke();
+    // 阴影
+    ctx.fillStyle = 'rgba(150,160,175,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(130, 155, 100, 12, 0, 0, Math.PI*2);
+    ctx.fill();
+    // 云尾
+    ctx.strokeStyle = 'rgba(220,225,230,0.7)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(30, 140);
+    ctx.quadraticCurveTo(15, 135, 8, 142);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(225, 135);
+    ctx.quadraticCurveTo(240, 130, 248, 138);
+    ctx.stroke();
+    // 淡墨晕染
+    wash(ctx, 128, 115, 90, '#a0b0c0', 0.1);
+}
+
+function genLantern(ctx) {
+    paper(ctx);
+    // 挂绳
+    ctx.strokeStyle = '#5a3015';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(128, 10); ctx.lineTo(128, 40);
+    ctx.stroke();
+    // 顶盖
+    ctx.fillStyle = '#5a3015';
+    ctx.fillRect(108, 38, 40, 12);
+    ctx.fillStyle = '#c9a84c';
+    ctx.fillRect(112, 38, 32, 4);
+    // 灯笼主体
+    const bodyG = ctx.createRadialGradient(128, 95, 10, 128, 95, 55);
+    bodyG.addColorStop(0, '#ffcc66');
+    bodyG.addColorStop(0.3, '#ff8844');
+    bodyG.addColorStop(0.7, '#e44536');
+    bodyG.addColorStop(1, '#a42516');
+    ctx.fillStyle = bodyG;
+    ctx.beginPath();
+    ctx.ellipse(128, 95, 50, 55, 0, 0, Math.PI*2);
+    ctx.fill();
+    // 灯笼骨架
+    ctx.strokeStyle = 'rgba(139,32,32,0.4)';
+    ctx.lineWidth = 1.5;
+    for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.ellipse(128 + i*15, 95, 5, 55, 0, 0, Math.PI*2);
+        ctx.stroke();
+    }
+    // 上下箍
+    ctx.fillStyle = '#5a3015';
+    ctx.fillRect(100, 50, 56, 10);
+    ctx.fillRect(100, 130, 56, 10);
+    ctx.fillStyle = '#c9a84c';
+    ctx.fillRect(104, 50, 48, 3);
+    ctx.fillRect(104, 137, 48, 3);
+    // 福字
+    ctx.fillStyle = '#f5f0e1';
+    ctx.font = 'bold 36px KaiTi';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('福', 128, 95);
+    // 底座
+    ctx.fillStyle = '#5a3015';
+    ctx.fillRect(112, 140, 32, 10);
+    // 流苏
+    ctx.strokeStyle = '#c44536';
+    ctx.lineWidth = 3;
+    for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(128 + i*6, 150);
+        ctx.lineTo(128 + i*6, 180 + Math.abs(i)*5);
+        ctx.stroke();
+    }
+    // 流苏结
+    ctx.fillStyle = '#c9a84c';
+    ctx.beginPath();
+    ctx.arc(128, 155, 6, 0, Math.PI*2); ctx.fill();
+    // 光晕
+    wash(ctx, 128, 95, 80, '#ff8844', 0.2);
+    wash(ctx, 128, 95, 50, '#ffcc66', 0.15);
+}
+
+function genStatue(ctx) {
+    paper(ctx);
+    // 基座
+    ctx.fillStyle = '#7a7a7a';
+    ctx.fillRect(70, 215, 116, 25);
+    ctx.fillStyle = '#8a8a8a';
+    ctx.fillRect(78, 205, 100, 12);
+    ctx.strokeStyle = '#5a5a5a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(70, 215, 116, 25);
+    ctx.strokeRect(78, 205, 100, 12);
+    // 身体（长袍）
+    const bodyG = ctx.createLinearGradient(85, 100, 171, 205);
+    bodyG.addColorStop(0, '#b0b0b0');
+    bodyG.addColorStop(0.5, '#9a9a9a');
+    bodyG.addColorStop(1, '#7a7a7a');
+    ctx.fillStyle = bodyG;
+    ctx.beginPath();
+    ctx.moveTo(85, 205);
+    ctx.lineTo(92, 110);
+    ctx.lineTo(164, 110);
+    ctx.lineTo(171, 205);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#6a6a6a';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 长袍褶皱
+    ctx.strokeStyle = 'rgba(80,80,80,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(105, 115); ctx.lineTo(100, 200);
+    ctx.moveTo(128, 112); ctx.lineTo(128, 202);
+    ctx.moveTo(150, 115); ctx.lineTo(155, 200);
+    ctx.stroke();
+    // 袖子
+    ctx.fillStyle = '#959595';
+    ctx.beginPath();
+    ctx.ellipse(78, 145, 14, 32, -0.15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(178, 145, 14, 32, 0.15, 0, Math.PI*2); ctx.fill();
+    // 手（合十）
+    ctx.fillStyle = '#a5a5a5';
+    ctx.beginPath();
+    ctx.ellipse(128, 135, 10, 14, 0, 0, Math.PI*2); ctx.fill();
+    // 头
+    const headG = ctx.createRadialGradient(120, 75, 5, 128, 80, 22);
+    headG.addColorStop(0, '#b5b5b5');
+    headG.addColorStop(1, '#909090');
+    ctx.fillStyle = headG;
+    ctx.beginPath();
+    ctx.arc(128, 80, 22, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#707070';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 发髻
+    ctx.fillStyle = '#858585';
+    ctx.beginPath();
+    ctx.arc(128, 55, 12, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(120, 50, 16, 8);
+    // 发簪
+    ctx.fillStyle = '#c9a84c';
+    ctx.fillRect(118, 52, 20, 3);
+    // 面部
+    ctx.strokeStyle = '#5a5a5a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(118, 78); ctx.lineTo(123, 78);
+    ctx.moveTo(133, 78); ctx.lineTo(138, 78);
+    ctx.stroke();
+    // 嘴
+    ctx.beginPath();
+    ctx.moveTo(123, 90); ctx.lineTo(133, 90);
+    ctx.stroke();
+    // 胡须
+    ctx.strokeStyle = 'rgba(90,90,90,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(120, 92); ctx.lineTo(116, 102);
+    ctx.moveTo(136, 92); ctx.lineTo(140, 102);
+    ctx.moveTo(128, 93); ctx.lineTo(128, 105);
+    ctx.stroke();
+    // 风化痕迹
+    ctx.fillStyle = 'rgba(60,60,60,0.2)';
+    for (let i = 0; i < 12; i++) {
+        ctx.beginPath();
+        ctx.arc(80+Math.random()*96, 70+Math.random()*130, Math.random()*4+1, 0, Math.PI*2);
+        ctx.fill();
+    }
+    // 青苔
+    ctx.fillStyle = 'rgba(74,103,65,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(88, 195, 14, 5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(165, 200, 10, 4, 0, 0, Math.PI*2); ctx.fill();
+}
+
+// ===== 交互点 =====
+
+function genInteract(ctx, icon, color, name) {
+    paper(ctx);
+    // 外圈光晕
+    const glow = ctx.createRadialGradient(128, 110, 10, 128, 110, 100);
+    glow.addColorStop(0, color + '66');
+    glow.addColorStop(1, color + '00');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // 外圈
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(128, 110, 80, 0, Math.PI*2);
+    ctx.stroke();
+    // 内圈
+    ctx.fillStyle = color + '22';
+    ctx.beginPath();
+    ctx.arc(128, 110, 68, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 5]);
+    ctx.beginPath();
+    ctx.arc(128, 110, 68, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 图标
+    ctx.font = '48px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, 128, 105);
+    // 名称
+    ctx.font = 'bold 22px KaiTi';
+    ctx.fillStyle = '#2c2c2c';
+    ctx.fillText(name, 128, 195);
+    // 四角装饰
+    ctx.fillStyle = color;
+    [[60,60],[196,60],[60,160],[196,160]].forEach(([x,y]) => {
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+    });
+}
+
+// ===== 生成控制 =====
+
+const ALL_ASSETS = [
+    { cat: 'terrain', items: [
+        { id: 'grass', name: '草地', fn: genGrass },
+        { id: 'forest', name: '森林', fn: genForest },
+        { id: 'mountain', name: '山脉', fn: genMountain },
+        { id: 'water', name: '河流', fn: genWater },
+        { id: 'sand', name: '沙地', fn: genSand },
+        { id: 'snow', name: '雪地', fn: genSnow }
+    ]},
+    { cat: 'building', items: [
+        { id: 'sect', name: '宗门', fn: genSect },
+        { id: 'house', name: '房屋', fn: genHouse },
+        { id: 'farm', name: '农田', fn: genFarm },
+        { id: 'altar', name: '练功台', fn: genAltar },
+        { id: 'market', name: '坊市', fn: genMarket },
+        { id: 'tower', name: '塔楼', fn: genTower }
+    ]},
+    { cat: 'decoration', items: [
+        { id: 'tree', name: '古树', fn: genTree },
+        { id: 'flower', name: '灵花', fn: genFlower },
+        { id: 'rock', name: '灵石', fn: genRock },
+        { id: 'cloud', name: '祥云', fn: genCloud },
+        { id: 'lantern', name: '灯笼', fn: genLantern },
+        { id: 'statue', name: '石像', fn: genStatue }
+    ]},
+    { cat: 'interact', items: [
+        { id: 'point_sect', name: '宗门', fn: (ctx) => genInteract(ctx, '🏯', '#c44536', '青云宗') },
+        { id: 'point_forest', name: '森林', fn: (ctx) => genInteract(ctx, '🐺', '#8b4513', '妖兽森林') },
+        { id: 'point_herb', name: '药谷', fn: (ctx) => genInteract(ctx, '🌿', '#4a6741', '灵药谷') },
+        { id: 'point_market', name: '坊市', fn: (ctx) => genInteract(ctx, '🏪', '#b8860b', '坊市') },
+        { id: 'point_cave', name: '洞府', fn: (ctx) => genInteract(ctx, '🕳', '#4a4a4a', '秘境洞府') }
+    ]}
+];
+
+function generateAll() {
+    const container = document.getElementById('container');
+    container.innerHTML = '';
+    let total = 0, done = 0;
+    ALL_ASSETS.forEach(c => total += c.items.length);
+
+    document.getElementById('progress').style.display = 'block';
+
+    ALL_ASSETS.forEach(cat => {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'category';
+        catDiv.innerHTML = `<h2>${cat.cat === 'terrain' ? '🌿 地形' : cat.cat === 'building' ? '🏛 建筑' : cat.cat === 'decoration' ? '🌲 装饰' : '✦ 交互点'} (${cat.items.length}个)</h2>`;
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+
+        cat.items.forEach(item => {
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+            item.fn(ctx);
+            generated[cat.cat + '/' + item.id] = canvas;
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item';
+            itemDiv.appendChild(canvas);
+            const name = document.createElement('div');
+            name.className = 'name';
+            name.textContent = item.name;
+            itemDiv.appendChild(name);
+            const dl = document.createElement('a');
+            dl.className = 'dl';
+            dl.textContent = '下载';
+            dl.href = canvas.toDataURL('image/png');
+            dl.download = item.id + '.png';
+            itemDiv.appendChild(dl);
+
+            grid.appendChild(itemDiv);
+
+            done++;
+            document.getElementById('progressBar').style.width = (done/total*100) + '%';
+            document.getElementById('progressText').textContent = `生成中... ${done}/${total}`;
+        });
+
+        catDiv.appendChild(grid);
+        container.appendChild(catDiv);
+    });
+
+    setTimeout(() => {
+        document.getElementById('progressText').textContent = `✅ 全部生成完成！共 ${total} 个高质量水墨素材`;
+        setTimeout(() => { document.getElementById('progress').style.display = 'none'; }, 3000);
+    }, 500);
+}
+
+function downloadAll() {
+    if (Object.keys(generated).length === 0) {
+        alert('请先生成素材！');
+        return;
+    }
+    let count = 0;
+    for (const key of Object.keys(generated)) {
+        const canvas = generated[key];
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = key.replace('/', '_') + '.png';
+        a.click();
+        count++;
+    }
+    alert(`已触发 ${count} 个素材下载！\n\n下载后请按分类放到：\nassets/images/terrain/\nassets/images/buildings/\nassets/images/decorations/\nassets/images/interact/`);
+}
+
+// 自动生成
+window.onload = generateAll;
+</script>
+</body>
+</html>

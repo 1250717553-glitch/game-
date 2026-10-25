@@ -1,0 +1,19 @@
+{
+  "name": "xiuxian-game",
+  "version": "0.8.0",
+  "private": true,
+  "description": "修仙录 —— 基于 Phaser 3 的水墨风修仙网页游戏",
+  "scripts": {
+    "start": "npx --yes serve . -l 8000",
+    "dev": "npx --yes serve . -l 8000"
+  },
+  "keywords": [
+    "phaser3",
+    "game",
+    "xiuxian",
+    "ink-wash",
+    "rpg",
+    "javascript"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>修仙录 - 地图编辑器 v3</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'KaiTi', '楷体', 'STKaiti', serif;
+    background: #1a1a1a;
+    color: #f5f0e1;
+    overflow: hidden;
+    height: 100vh;
+    user-select: none;
+}
+
+/* 顶部工具栏 */
+.toolbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 46px;
+    background: linear-gradient(180deg, #2c2c2c 0%, #222 100%);
+    border-bottom: 2px solid #b8860b;
+    display: flex; align-items: center;
+    padding: 0 12px;
+    z-index: 1000; gap: 4px;
+}
+.toolbar-title {
+    font-family: 'STXingkai', '华文行楷', serif;
+    font-size: 18px; color: #b8860b;
+    margin-right: 12px; letter-spacing: 2px;
+}
+.tool-btn {
+    padding: 5px 10px;
+    background: #3a3a3a; border: 1px solid #555;
+    color: #f5f0e1; font-family: 'KaiTi', serif;
+    font-size: 12px; cursor: pointer; border-radius: 3px;
+    transition: all 0.2s;
+}
+.tool-btn:hover { background: #4a4a4a; border-color: #b8860b; }
+.tool-btn.active { background: #c44536; border-color: #c44536; color: white; }
+.tool-btn.save { background: #4a6741; border-color: #4a6741; }
+.tool-btn.import { background: #3a6b8c; border-color: #3a6b8c; }
+.spacer { flex: 1; }
+.zoom-info { color: #888; font-size: 11px; margin-right: 6px; }
+
+/* 左侧面板 */
+.left-panel {
+    position: fixed; top: 46px; left: 0;
+    width: 210px; bottom: 0;
+    background: rgba(30,30,30,0.95);
+    border-right: 1px solid #444;
+    z-index: 900;
+    overflow-y: auto;
+    padding: 10px;
+}
+.panel-section { margin-bottom: 12px; }
+.panel-section-title {
+    font-size: 12px; color: #b8860b;
+    margin-bottom: 6px; padding-bottom: 3px;
+    border-bottom: 1px solid #444;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.panel-section-title .add-btn {
+    cursor: pointer; color: #4a6741; font-size: 14px;
+}
+.map-list-item {
+    padding: 6px 8px; margin-bottom: 3px;
+    background: #2a2a2a; border-radius: 3px;
+    cursor: pointer; font-size: 11px;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.map-list-item:hover { background: #333; }
+.map-list-item.active { background: rgba(184,134,11,0.2); border-left-color: #b8860b; }
+.map-list-item .del { color: #c44536; font-size: 13px; cursor: pointer; }
+
+.asset-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+}
+.asset-item {
+    aspect-ratio: 1;
+    background: #2a2a2a; border: 1px solid #444;
+    border-radius: 3px; cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: all 0.2s; overflow: hidden;
+    position: relative;
+}
+.asset-item:hover { border-color: #b8860b; background: #333; }
+.asset-item.selected { border-color: #c44536; background: rgba(196,69,54,0.2); }
+.asset-item img { width: 75%; height: 75%; object-fit: contain; }
+.asset-item .name { font-size: 7px; color: #888; margin-top: 1px; text-align: center; line-height: 1; }
+.asset-item .custom-badge {
+    position: absolute; top: 1px; right: 1px;
+    font-size: 7px; color: #3a6b8c;
+}
+
+/* 右侧属性面板 */
+.right-panel {
+    position: fixed; top: 46px; right: 0;
+    width: 250px; bottom: 0;
+    background: rgba(30,30,30,0.95);
+    border-left: 1px solid #444;
+    z-index: 900; overflow-y: auto; padding: 10px;
+}
+.prop-group { margin-bottom: 10px; }
+.prop-label { font-size: 11px; color: #888; margin-bottom: 3px; }
+.prop-input {
+    width: 100%; padding: 4px 7px;
+    background: #222; border: 1px solid #444;
+    color: #f5f0e1; font-family: 'KaiTi', serif;
+    font-size: 12px; border-radius: 3px;
+}
+.prop-input:focus { outline: none; border-color: #b8860b; }
+.prop-textarea {
+    width: 100%; min-height: 45px; padding: 4px 7px;
+    background: #222; border: 1px solid #444;
+    color: #f5f0e1; font-family: 'KaiTi', serif;
+    font-size: 11px; border-radius: 3px; resize: vertical;
+}
+.layer-item {
+    display: flex; align-items: center;
+    padding: 4px 7px; margin-bottom: 2px;
+    background: #2a2a2a; border-radius: 3px;
+    cursor: pointer; font-size: 11px;
+}
+.layer-item:hover { background: #333; }
+.layer-item.active { background: rgba(184,134,11,0.2); border-left: 3px solid #b8860b; }
+.layer-item input[type="checkbox"] { margin-right: 6px; }
+.layer-name { flex: 1; }
+
+.prop-btn-row {
+    display: flex; gap: 4px; margin-top: 6px;
+}
+.prop-btn {
+    flex: 1; padding: 5px;
+    background: #3a3a3a; border: 1px solid #555;
+    color: #f5f0e1; font-family: 'KaiTi', serif;
+    font-size: 11px; cursor: pointer; border-radius: 3px;
+    transition: all 0.2s;
+}
+.prop-btn:hover { background: #4a4a4a; border-color: #b8860b; }
+.prop-btn.lock { background: #6b4423; border-color: #8b5a2b; }
+.prop-btn.lock.active { background: #c44536; border-color: #c44536; }
+
+/* 画布区域 */
+.canvas-container {
+    position: fixed; top: 46px; left: 210px; right: 250px; bottom: 0;
+    overflow: hidden; background: #0d0d0d;
+    cursor: crosshair;
+}
+#mapCanvas { display: block; transform-origin: 0 0; }
+
+/* 底部状态栏 */
+.status-bar {
+    position: fixed; bottom: 0; left: 210px; right: 250px;
+    height: 24px; background: rgba(30,30,30,0.95);
+    border-top: 1px solid #444;
+    display: flex; align-items: center;
+    padding: 0 12px; font-size: 10px; color: #888;
+    z-index: 800; gap: 15px;
+}
+.status-bar span { color: #b8860b; }
+
+/* 提示 */
+.toast {
+    position: fixed; top: 56px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(196,69,54,0.95); color: white;
+    padding: 6px 16px; border-radius: 4px;
+    font-size: 12px; z-index: 2000; display: none;
+}
+
+/* 隐藏的文件输入 */
+#fileInput { display: none; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #222; }
+::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+
+/* 快捷键提示 */
+.shortcut-hint {
+    position: fixed; bottom: 28px; right: 255px;
+    background: rgba(0,0,0,0.8); color: #aaa;
+    padding: 8px 12px; border-radius: 4px;
+    font-size: 10px; z-index: 850; display: none;
+    line-height: 1.6;
+}
+.shortcut-hint.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- 顶部工具栏 -->
+<div class="toolbar">
+    <div class="toolbar-title">地图编辑器 v3</div>
+    <button class="tool-btn active" id="toolSelect" onclick="setTool('select')" title="选择/移动元素 (V)">🖱移动</button>
+    <button class="tool-btn" id="toolPlace" onclick="setTool('place')" title="放置素材 (B)">🏛放置</button>
+    <button class="tool-btn" id="toolCollision" onclick="setTool('collision')" title="画碰撞体 (C)">⬛碰撞</button>
+    <button class="tool-btn" id="toolInteract" onclick="setTool('interact')" title="放交互点 (I)">✦交互</button>
+    <button class="tool-btn" id="toolErase" onclick="setTool('erase')" title="擦除 (E)">🧹擦除</button>
+    <div class="spacer"></div>
+    <button class="tool-btn import" onclick="document.getElementById('fileInput').click()" title="导入自定义素材">📥导入素材</button>
+    <input type="file" id="fileInput" accept="image/*" multiple onchange="importCustomAssets(event)">
+    <span class="zoom-info" id="zoomInfo">100%</span>
+    <button class="tool-btn" onclick="zoomIn()">+</button>
+    <button class="tool-btn" onclick="zoomOut()">-</button>
+    <button class="tool-btn" onclick="resetView()">⟲</button>
+    <button class="tool-btn save" onclick="saveAll()">💾保存</button>
+    <button class="tool-btn save" onclick="exportMap()">📤导出</button>
+</div>
+
+<!-- 左侧面板 -->
+<div class="left-panel">
+    <div class="panel-section">
+        <div class="panel-section-title">
+            🗺 地图列表
+            <span class="add-btn" onclick="newMap()" title="新建地图">+</span>
+        </div>
+        <div id="mapList"></div>
+    </div>
+    <div class="panel-section">
+        <div class="panel-section-title">⭐ 自定义素材</div>
+        <div class="asset-grid" id="customAssets"></div>
+    </div>
+    <div class="panel-section">
+        <div class="panel-section-title">🌿 地形</div>
+        <div class="asset-grid" id="terrainAssets"></div>
+    </div>
+    <div class="panel-section">
+        <div class="panel-section-title">🏛 建筑</div>
+        <div class="asset-grid" id="buildingAssets"></div>
+    </div>
+    <div class="panel-section">
+        <div class="panel-section-title">🌲 装饰</div>
+        <div class="asset-grid" id="decoAssets"></div>
+    </div>
+    <div class="panel-section">
+        <div class="panel-section-title">✦ 交互点</div>
+        <div class="asset-grid" id="interactAssets"></div>
+    </div>
+</div>
+
+<!-- 右侧属性面板 -->
+<div class="right-panel">
+    <div class="panel-section">
+        <div class="panel-section-title">📚 图层</div>
+        <div id="layerList"></div>
+    </div>
+    <div class="panel-section">
+        <div class="panel-section-title">⚙ 元素属性</div>
+        <div id="propPanel">
+            <div style="color:#666;font-size:11px;text-align:center;padding:15px 0;">点击地图上的元素<br>查看和编辑属性</div>
+        </div>
+    </div>
+    <div class="panel-section">
+        <div class="panel-section-title">🗺 地图设置</div>
+        <div class="prop-group">
+            <div class="prop-label">地图名称</div>
+            <input class="prop-input" id="mapName" onchange="updateMapName()">
+        </div>
+        <div class="prop-group">
+            <div class="prop-label">宽度</div>
+            <input class="prop-input" id="mapWidth" type="number" onchange="resizeMap()">
+        </div>
+        <div class="prop-group">
+            <div class="prop-label">高度</div>
+            <input class="prop-input" id="mapHeight" type="number" onchange="resizeMap()">
+        </div>
+    </div>
+    <div class="panel-section">
+        <div class="panel-section-title">⌨ 快捷键</div>
+        <div style="font-size:10px;color:#666;line-height:1.8;">
+            V/B/C/I/E - 切换工具<br>
+            方向键 - 微调位置<br>
+            Delete - 删除选中<br>
+            L - 锁定/解锁<br>
+            Ctrl+C/V - 复制粘贴<br>
+            Ctrl+S - 保存<br>
+            [ / ] - 调整层级<br>
+            ? - 显示/隐藏帮助
+        </div>
+    </div>
+</div>
+
+<!-- 画布 -->
+<div class="canvas-container" id="canvasContainer">
+    <canvas id="mapCanvas"></canvas>
+</div>
+
+<!-- 底部状态栏 -->
+<div class="status-bar">
+    <div>坐标: <span id="mousePos">0, 0</span></div>
+    <div>元素: <span id="elementCount">0</span></div>
+    <div>锁定: <span id="lockedCount">0</span></div>
+    <div>碰撞: <span id="collisionCount">0</span></div>
+    <div>交互: <span id="interactCount">0</span></div>
+    <div style="margin-left:auto;color:#666;">移动工具下拖拽元素 | 右键删除 | 滚轮缩放 | 中键拖动</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   地图编辑器 v3
+   新增：自由移动、锁定素材、自定义素材导入、快捷键、复制粘贴、层级调整
+   ============================================================ */
+
+const canvas = document.getElementById('mapCanvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('canvasContainer');
+
+const ASSET_PATH = '../assets/images/';
+const CUSTOM_ASSET_PATH = '../assets/custom/';
+
+// 内置素材定义
+const ASSET_DEFS = {
+    terrain: ['grass','forest','mountain','water','sand','snow'],
+    building: ['sect','house','farm','altar','market','tower'],
+    decoration: ['tree','flower','rock','cloud','lantern','statue'],
+    interact: ['point_sect','point_forest','point_herb','point_market','point_cave']
+};
+const ASSET_NAMES = {
+    grass:'草地', forest:'森林', mountain:'山脉', water:'河流', sand:'沙地', snow:'雪地',
+    sect:'宗门', house:'房屋', farm:'农田', altar:'练功台', market:'坊市', tower:'塔楼',
+    tree:'古树', flower:'灵花', rock:'灵石', cloud:'祥云', lantern:'灯笼', statue:'石像',
+    point_sect:'宗门点', point_forest:'森林点', point_herb:'药谷点', point_market:'坊市点', point_cave:'洞府点'
+};
+
+// 自定义素材（存在localStorage，base64格式）
+let customAssets = JSON.parse(localStorage.getItem('xiuxian_custom_assets') || '[]');
+
+// 预加载素材图片
+const assetImages = {};
+function loadAssets() {
+    for (const cat of Object.keys(ASSET_DEFS)) {
+        for (const id of ASSET_DEFS[cat]) {
+            const img = new Image();
+            img.src = ASSET_PATH + cat + '/' + id + '.png';
+            assetImages[cat + '/' + id] = img;
+        }
+    }
+    // 加载自定义素材
+    customAssets.forEach(asset => {
+        const img = new Image();
+        img.src = asset.data;
+        assetImages['custom/' + asset.id] = img;
+    });
+}
+
+// 多地图管理
+let maps = {};
+let currentMapId = null;
+function getCurrentMap() { return maps[currentMapId]; }
+
+// 新建空白地图
+function newMap() {
+    const name = prompt('请输入地图名称：', '新地图');
+    if (!name) return;
+    const id = 'map_' + Date.now();
+    maps[id] = {
+        id, name,
+        width: 1600, height: 1200,
+        layers: { terrain: [], building: [], decoration: [], collision: [], interact: [] },
+        activeLayer: 'terrain'
+    };
+    currentMapId = id;
+    refreshMapList();
+    loadMapToCanvas();
+    showToast('已创建空白地图: ' + name);
+}
+
+function deleteMap(id) {
+    if (!confirm('确定删除地图 "' + maps[id].name + '" ？')) return;
+    delete maps[id];
+    if (currentMapId === id) {
+        const ids = Object.keys(maps);
+        currentMapId = ids.length > 0 ? ids[0] : null;
+    }
+    refreshMapList();
+    if (currentMapId) loadMapToCanvas();
+}
+
+function switchMap(id) {
+    currentMapId = id;
+    selectedElement = null;
+    refreshMapList();
+    loadMapToCanvas();
+}
+
+function refreshMapList() {
+    const list = document.getElementById('mapList');
+    list.innerHTML = '';
+    for (const id of Object.keys(maps)) {
+        const m = maps[id];
+        const div = document.createElement('div');
+        div.className = 'map-list-item' + (id === currentMapId ? ' active' : '');
+        div.innerHTML = `<span>🗺 ${m.name}</span><span class="del" onclick="event.stopPropagation();deleteMap('${id}')">×</span>`;
+        div.onclick = () => switchMap(id);
+        list.appendChild(div);
+    }
+}
+
+function loadMapToCanvas() {
+    const m = getCurrentMap();
+    if (!m) return;
+    canvas.width = m.width;
+    canvas.height = m.height;
+    document.getElementById('mapName').value = m.name;
+    document.getElementById('mapWidth').value = m.width;
+    document.getElementById('mapHeight').value = m.height;
+    renderLayerList();
+    render();
+    updateStatus();
+}
+
+function updateMapName() {
+    const m = getCurrentMap();
+    if (m) { m.name = document.getElementById('mapName').value; refreshMapList(); }
+}
+
+function resizeMap() {
+    const m = getCurrentMap();
+    if (!m) return;
+    m.width = parseInt(document.getElementById('mapWidth').value) || 1600;
+    m.height = parseInt(document.getElementById('mapHeight').value) || 1200;
+    canvas.width = m.width;
+    canvas.height = m.height;
+    render();
+    showToast('地图尺寸已更新');
+}
+
+// 图层
+const LAYERS = [
+    { key: 'terrain', name: '地形', icon: '🌿' },
+    { key: 'building', name: '建筑', icon: '🏛' },
+    { key: 'decoration', name: '装饰', icon: '🌲' },
+    { key: 'collision', name: '碰撞', icon: '⬛' },
+    { key: 'interact', name: '交互', icon: '✦' }
+];
+let layerVisibility = { terrain: true, building: true, decoration: true, collision: true, interact: true };
+
+function renderLayerList() {
+    const m = getCurrentMap();
+    const list = document.getElementById('layerList');
+    list.innerHTML = '';
+    LAYERS.forEach(layer => {
+        const div = document.createElement('div');
+        div.className = 'layer-item' + (m && m.activeLayer === layer.key ? ' active' : '');
+        div.innerHTML = `<input type="checkbox" ${layerVisibility[layer.key]?'checked':''} onchange="toggleLayer('${layer.key}',this.checked)"><span class="layer-name">${layer.icon} ${layer.name}</span>`;
+        div.onclick = (e) => {
+            if (e.target.type !== 'checkbox' && m) {
+                m.activeLayer = layer.key;
+                renderLayerList();
+            }
+        };
+        list.appendChild(div);
+    });
+}
+
+function toggleLayer(key, visible) {
+    layerVisibility[key] = visible;
+    render();
+}
+
+// 工具状态
+let currentTool = 'select';
+let selectedAsset = null;
+let selectedElement = null;
+let zoom = 1, offsetX = 0, offsetY = 0;
+let isPanning = false, panStartX = 0, panStartY = 0;
+let isDragging = false, dragStartX = 0, dragStartY = 0;
+let collisionStart = null;
+let clipboard = null; // 复制粘贴用
+
+function setTool(tool) {
+    currentTool = tool;
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    const btnId = 'tool' + tool.charAt(0).toUpperCase() + tool.slice(1);
+    const btn = document.getElementById(btnId);
+    if (btn) btn.classList.add('active');
+    const cursors = { select: 'default', place: 'crosshair', collision: 'crosshair', interact: 'crosshair', erase: 'not-allowed' };
+    container.style.cursor = cursors[tool] || 'default';
+}
+
+// 素材面板渲染
+function renderAssetPanels() {
+    // 自定义素材
+    const customPanel = document.getElementById('customAssets');
+    customPanel.innerHTML = '';
+    if (customAssets.length === 0) {
+        customPanel.innerHTML = '<div style="grid-column:span 3;font-size:9px;color:#666;text-align:center;padding:8px 0;">点上方"导入素材"<br>把图片放进来</div>';
+    }
+    customAssets.forEach(asset => {
+        const div = document.createElement('div');
+        div.className = 'asset-item';
+        div.title = asset.name + ' (右键删除)';
+        const img = document.createElement('img');
+        img.src = asset.data;
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.textContent = asset.name;
+        const badge = document.createElement('div');
+        badge.className = 'custom-badge';
+        badge.textContent = '★';
+        div.appendChild(img);
+        div.appendChild(name);
+        div.appendChild(badge);
+        div.onclick = () => {
+            selectedAsset = { category: 'custom', id: asset.id, name: asset.name, width: asset.width, height: asset.height };
+            document.querySelectorAll('.asset-item').forEach(el => el.classList.remove('selected'));
+            div.classList.add('selected');
+            setTool('place');
+            showToast('已选择自定义素材: ' + asset.name);
+        };
+        div.oncontextmenu = (e) => {
+            e.preventDefault();
+            if (confirm('删除自定义素材 "' + asset.name + '" ？')) {
+                customAssets = customAssets.filter(a => a.id !== asset.id);
+                localStorage.setItem('xiuxian_custom_assets', JSON.stringify(customAssets));
+                renderAssetPanels();
+                showToast('已删除');
+            }
+        };
+        customPanel.appendChild(div);
+    });
+
+    // 内置素材
+    const cats = [
+        { key: 'terrain', panel: 'terrainAssets' },
+        { key: 'building', panel: 'buildingAssets' },
+        { key: 'decoration', panel: 'decoAssets' },
+        { key: 'interact', panel: 'interactAssets' }
+    ];
+    cats.forEach(cat => {
+        const panel = document.getElementById(cat.panel);
+        panel.innerHTML = '';
+        ASSET_DEFS[cat.key].forEach(id => {
+            const div = document.createElement('div');
+            div.className = 'asset-item';
+            const img = document.createElement('img');
+            img.src = ASSET_PATH + cat.key + '/' + id + '.png';
+            img.onerror = function() { this.style.opacity = '0.3'; };
+            const name = document.createElement('div');
+            name.className = 'name';
+            name.textContent = ASSET_NAMES[id] || id;
+            div.appendChild(img);
+            div.appendChild(name);
+            div.onclick = () => {
+                selectedAsset = { category: cat.key, id };
+                document.querySelectorAll('.asset-item').forEach(el => el.classList.remove('selected'));
+                div.classList.add('selected');
+                if (currentTool !== 'place' && currentTool !== 'interact') {
+                    setTool(cat.key === 'interact' ? 'interact' : 'place');
+                }
+                showToast('已选择: ' + (ASSET_NAMES[id] || id));
+            };
+            panel.appendChild(div);
+        });
+    });
+}
+
+// 导入自定义素材
+function importCustomAssets(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    let imported = 0;
+    Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                const name = file.name.replace(/\.[^/.]+$/, '');
+                customAssets.push({
+                    id, name,
+                    data: e.target.result,
+                    width: img.width,
+                    height: img.height
+                });
+                localStorage.setItem('xiuxian_custom_assets', JSON.stringify(customAssets));
+                // 预加载图片
+                const newImg = new Image();
+                newImg.src = e.target.result;
+                assetImages['custom/' + id] = newImg;
+                imported++;
+                renderAssetPanels();
+                showToast('已导入素材: ' + name + ' (' + img.width + 'x' + img.height + ')');
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+    event.target.value = '';
+}
+
+// 画布事件
+function setupEvents() {
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    container.addEventListener('wheel', onWheel, { passive: false });
+    // 键盘事件
+    document.addEventListener('keydown', onKeyDown);
+}
+
+function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: (e.clientX - rect.left) / zoom, y: (e.clientY - rect.top) / zoom };
+}
+
+function onMouseDown(e) {
+    const m = getCurrentMap();
+    if (!m) return;
+    const pos = getCanvasPos(e);
+
+    // 中键拖动视图
+    if (e.button === 1) {
+        isPanning = true;
+        panStartX = e.clientX - offsetX;
+        panStartY = e.clientY - offsetY;
+        return;
+    }
+
+    if (currentTool === 'select') {
+        const el = findElementAt(pos.x, pos.y);
+        if (el && !el.locked) {
+            selectedElement = el;
+            isDragging = true;
+            dragStartX = pos.x - el.x;
+            dragStartY = pos.y - el.y;
+            showPropPanel(el);
+        } else if (el && el.locked) {
+            showToast('该元素已锁定，按 L 解锁后才能移动');
+            selectedElement = el;
+            showPropPanel(el);
+        } else {
+            selectedElement = null;
+            hidePropPanel();
+            render();
+        }
+    } else if (currentTool === 'place' && selectedAsset) {
+        placeElement(pos.x, pos.y);
+    } else if (currentTool === 'interact' && selectedAsset) {
+        placeInteract(pos.x, pos.y);
+    } else if (currentTool === 'collision') {
+        collisionStart = pos;
+    } else if (currentTool === 'erase') {
+        eraseAt(pos.x, pos.y);
+    }
+
+    // 右键删除
+    if (e.button === 2) {
+        const el = findElementAt(pos.x, pos.y);
+        if (el && !el.locked) {
+            deleteElement(el);
+        } else if (el && el.locked) {
+            showToast('该元素已锁定，无法删除');
+        }
+    }
+}
+
+function onMouseMove(e) {
+    const pos = getCanvasPos(e);
+    document.getElementById('mousePos').textContent = Math.round(pos.x) + ', ' + Math.round(pos.y);
+
+    if (isPanning) {
+        offsetX = e.clientX - panStartX;
+        offsetY = e.clientY - panStartY;
+        updateCanvasTransform();
+        return;
+    }
+    if (isDragging && selectedElement && !selectedElement.locked) {
+        selectedElement.x = pos.x - dragStartX;
+        selectedElement.y = pos.y - dragStartY;
+        // 同步到实际数据
+        const m = getCurrentMap();
+        for (const key of Object.keys(m.layers)) {
+            const el = m.layers[key].find(e => e.id === selectedElement.id);
+            if (el) { el.x = selectedElement.x; el.y = selectedElement.y; break; }
+        }
+        render();
+        updatePropPanelPositions();
+    }
+    if (currentTool === 'collision' && collisionStart) {
+        render();
+        const x = Math.min(collisionStart.x, pos.x);
+        const y = Math.min(collisionStart.y, pos.y);
+        const w = Math.abs(pos.x - collisionStart.x);
+        const h = Math.abs(pos.y - collisionStart.y);
+        ctx.fillStyle = 'rgba(196,69,54,0.3)';
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = '#c44536';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+    }
+}
+
+function onMouseUp(e) {
+    if (isPanning) { isPanning = false; return; }
+    if (isDragging) { isDragging = false; return; }
+    if (currentTool === 'collision' && collisionStart) {
+        const pos = getCanvasPos(e);
+        const x = Math.min(collisionStart.x, pos.x);
+        const y = Math.min(collisionStart.y, pos.y);
+        const w = Math.abs(pos.x - collisionStart.x);
+        const h = Math.abs(pos.y - collisionStart.y);
+        if (w > 10 && h > 10) {
+            const m = getCurrentMap();
+            m.layers.collision.push({ id: 'c_'+Date.now(), x, y, w, h, auto: false });
+            showToast('碰撞体已创建');
+            updateStatus();
+        }
+        collisionStart = null;
+        render();
+    }
+}
+
+function onWheel(e) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    zoom = Math.max(0.2, Math.min(3, zoom * delta));
+    document.getElementById('zoomInfo').textContent = Math.round(zoom*100) + '%';
+    updateCanvasTransform();
+}
+
+function updateCanvasTransform() {
+    canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`;
+}
+
+// 键盘快捷键
+function onKeyDown(e) {
+    // 不阻止输入框的按键
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    const m = getCurrentMap();
+    if (!m) return;
+
+    // 工具切换
+    if (e.key === 'v' || e.key === 'V') { setTool('select'); }
+    else if (e.key === 'b' || e.key === 'B') { setTool('place'); }
+    else if (e.key === 'c' || e.key === 'C') { setTool('collision'); }
+    else if (e.key === 'i' || e.key === 'I') { setTool('interact'); }
+    else if (e.key === 'e' || e.key === 'E') { setTool('erase'); }
+
+    // 方向键微调
+    else if (selectedElement && !selectedElement.locked && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        if (e.key === 'ArrowUp') selectedElement.y -= step;
+        if (e.key === 'ArrowDown') selectedElement.y += step;
+        if (e.key === 'ArrowLeft') selectedElement.x -= step;
+        if (e.key === 'ArrowRight') selectedElement.x += step;
+        // 同步到实际数据
+        for (const key of Object.keys(m.layers)) {
+            const el = m.layers[key].find(el => el.id === selectedElement.id);
+            if (el) { el.x = selectedElement.x; el.y = selectedElement.y; break; }
+        }
+        render();
+        updatePropPanelPositions();
+    }
+
+    // 删除
+    else if (selectedElement && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        if (!selectedElement.locked) {
+            deleteElement(selectedElement);
+        } else {
+            showToast('该元素已锁定，无法删除');
+        }
+    }
+
+    // 锁定/解锁
+    else if (selectedElement && (e.key === 'l' || e.key === 'L')) {
+        toggleLock();
+    }
+
+    // 复制
+    else if (selectedElement && (e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault();
+        clipboard = JSON.parse(JSON.stringify(selectedElement));
+        showToast('已复制');
+    }
+
+    // 粘贴
+    else if (clipboard && (e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault();
+        const newEl = JSON.parse(JSON.stringify(clipboard));
+        newEl.id = newEl._layer + '_' + Date.now();
+        newEl.x += 20;
+        newEl.y += 20;
+        newEl.locked = false;
+        delete newEl._layer;
+        const layer = clipboard._layer || 'decoration';
+        m.layers[layer].push(newEl);
+        selectedElement = { ...newEl, _layer: layer };
+        showPropPanel(selectedElement);
+        render();
+        updateStatus();
+        showToast('已粘贴');
+    }
+
+    // 保存
+    else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveAll();
+    }
+
+    // 层级调整
+    else if (selectedElement && e.key === '[') {
+        e.preventDefault();
+        moveLayer(-1);
+    }
+    else if (selectedElement && e.key === ']') {
+        e.preventDefault();
+        moveLayer(1);
+    }
+}
+
+// 锁定/解锁
+function toggleLock() {
+    if (!selectedElement) return;
+    const m = getCurrentMap();
+    for (const key of Object.keys(m.layers)) {
+        const el = m.layers[key].find(e => e.id === selectedElement.id);
+        if (el) {
+            el.locked = !el.locked;
+            selectedElement.locked = el.locked;
+            showToast(el.locked ? '🔒 已锁定（不能移动/删除）' : '🔓 已解锁');
+            showPropPanel(selectedElement);
+            render();
+            updateStatus();
+            break;
+        }
+    }
+}
+
+// 层级调整
+function moveLayer(dir) {
+    if (!selectedElement) return;
+    const m = getCurrentMap();
+    const layer = selectedElement._layer;
+    const arr = m.layers[layer];
+    const idx = arr.findIndex(e => e.id === selectedElement.id);
+    if (idx === -1) return;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= arr.length) return;
+    [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+    render();
+    showToast(dir > 0 ? '上移一层' : '下移一层');
+}
+
+// 放置元素
+function placeElement(x, y) {
+    const m = getCurrentMap();
+    if (!m || !selectedAsset) return;
+    const cat = selectedAsset.category;
+
+    if (cat === 'custom') {
+        // 自定义素材
+        const w = selectedAsset.width || 100;
+        const h = selectedAsset.height || 100;
+        m.layers.decoration.push({
+            id: 'd_'+Date.now(),
+            type: selectedAsset.id,
+            isCustom: true,
+            x: x - w/2, y: y - h/2, w, h
+        });
+    } else if (cat === 'terrain' || cat === 'building' || cat === 'decoration') {
+        const w = cat === 'terrain' ? 128 : (cat === 'building' ? 100 : 64);
+        const h = cat === 'terrain' ? 128 : (cat === 'building' ? 100 : 64);
+        m.layers[cat].push({
+            id: cat[0]+'_'+Date.now(),
+            type: selectedAsset.id,
+            x: x - w/2, y: y - h/2, w, h
+        });
+    }
+    render();
+    updateStatus();
+}
+
+function placeInteract(x, y) {
+    const m = getCurrentMap();
+    if (!m || !selectedAsset) return;
+    if (selectedAsset.category === 'custom') {
+        m.layers.interact.push({
+            id: 'i_'+Date.now(),
+            type: selectedAsset.id,
+            isCustom: true,
+            x: x-32, y: y-32, w: 64, h: 64,
+            name: selectedAsset.name || '新地点',
+            desc: '点击进入',
+            scene: 'CustomScene',
+            interactive: true
+        });
+    } else if (selectedAsset.category === 'interact') {
+        const names = { point_sect:'青云宗', point_forest:'妖兽森林', point_herb:'灵药谷', point_market:'坊市', point_cave:'秘境洞府' };
+        const scenes = { point_sect:'BaseMapScene', point_forest:'BattleScene', point_herb:'HerbValleyScene', point_market:'MarketScene', point_cave:'CaveScene' };
+        m.layers.interact.push({
+            id: 'i_'+Date.now(),
+            type: selectedAsset.id,
+            x: x-32, y: y-32, w: 64, h: 64,
+            name: names[selectedAsset.id] || '新地点',
+            desc: '点击进入',
+            scene: scenes[selectedAsset.id] || 'CustomScene',
+            interactive: true
+        });
+    }
+    showToast('交互点已放置');
+    render();
+    updateStatus();
+}
+
+function eraseAt(x, y) {
+    const el = findElementAt(x, y);
+    if (el && !el.locked) { deleteElement(el); showToast('已擦除'); }
+    else if (el && el.locked) { showToast('该元素已锁定，无法擦除'); }
+}
+
+function deleteElement(el) {
+    const m = getCurrentMap();
+    for (const key of Object.keys(m.layers)) {
+        const idx = m.layers[key].findIndex(e => e.id === el.id);
+        if (idx !== -1) { m.layers[key].splice(idx, 1); break; }
+    }
+    selectedElement = null;
+    hidePropPanel();
+    render();
+    updateStatus();
+}
+
+function findElementAt(x, y) {
+    const m = getCurrentMap();
+    const order = ['interact','decoration','building','collision','terrain'];
+    for (const key of order) {
+        if (!layerVisibility[key]) continue;
+        for (let i = m.layers[key].length - 1; i >= 0; i--) {
+            const el = m.layers[key][i];
+            if (x >= el.x && x <= el.x+el.w && y >= el.y && y <= el.y+el.h) {
+                return { ...el, _layer: key };
+            }
+        }
+    }
+    return null;
+}
+
+// 属性面板
+function showPropPanel(el) {
+    const panel = document.getElementById('propPanel');
+    const typeName = el.isCustom ? ('★ ' + (selectedAsset?.name || el.type)) : (ASSET_NAMES[el.type] || el.type);
+    let html = `
+        <div class="prop-group"><div class="prop-label">类型</div>
+        <div style="font-size:12px;color:#b8860b;">${typeName}</div></div>
+        <div class="prop-group"><div class="prop-label">图层</div>
+        <div style="font-size:11px;color:#888;">${el._layer}</div></div>
+        <div class="prop-group"><div class="prop-label">X 坐标</div>
+        <input class="prop-input" type="number" value="${Math.round(el.x)}" onchange="updateElProp('x',this.value)"></div>
+        <div class="prop-group"><div class="prop-label">Y 坐标</div>
+        <input class="prop-input" type="number" value="${Math.round(el.y)}" onchange="updateElProp('y',this.value)"></div>
+        <div class="prop-group"><div class="prop-label">宽度</div>
+        <input class="prop-input" type="number" value="${Math.round(el.w)}" onchange="updateElProp('w',this.value)"></div>
+        <div class="prop-group"><div class="prop-label">高度</div>
+        <input class="prop-input" type="number" value="${Math.round(el.h)}" onchange="updateElProp('h',this.value)"></div>
+    `;
+    if (el._layer === 'interact') {
+        html += `
+            <div class="prop-group"><div class="prop-label">地点名称</div>
+            <input class="prop-input" value="${el.name||''}" onchange="updateElProp('name',this.value)"></div>
+            <div class="prop-group"><div class="prop-label">地点描述</div>
+            <textarea class="prop-textarea" onchange="updateElProp('desc',this.value)">${el.desc||''}</textarea></div>
+            <div class="prop-group"><div class="prop-label">跳转场景</div>
+            <input class="prop-input" value="${el.scene||''}" onchange="updateElProp('scene',this.value)"></div>
+            <div class="prop-group"><div class="prop-label">可交互</div>
+            <input type="checkbox" ${el.interactive?'checked':''} onchange="updateElProp('interactive',this.checked)" style="width:18px;height:18px;"></div>
+        `;
+    }
+    // 操作按钮
+    html += `
+        <div class="prop-btn-row">
+            <button class="prop-btn lock ${el.locked?'active':''}" onclick="toggleLock()" title="锁定后不能移动/删除 (L)">${el.locked?'🔒 已锁':'🔓 锁定'}</button>
+            <button class="prop-btn" onclick="duplicateElement()" title="复制 (Ctrl+C/V)">📋 复制</button>
+        </div>
+        <div class="prop-btn-row">
+            <button class="prop-btn" onclick="moveLayer(-1)" title="下移一层 ([)">↓ 下移</button>
+            <button class="prop-btn" onclick="moveLayer(1)" title="上移一层 (])">↑ 上移</button>
+        </div>
+        <button class="prop-btn" style="width:100%;margin-top:6px;background:#c44536;border-color:#c44536;" onclick="deleteSelected()">🗑 删除元素 (Delete)</button>
+    `;
+    panel.innerHTML = html;
+}
+
+function hidePropPanel() {
+    document.getElementById('propPanel').innerHTML = '<div style="color:#666;font-size:11px;text-align:center;padding:15px 0;">点击地图上的元素<br>查看和编辑属性</div>';
+}
+
+function updatePropPanelPositions() {
+    if (!selectedElement) return;
+    const inputs = document.querySelectorAll('#propPanel .prop-input');
+    if (inputs.length >= 4) {
+        inputs[0].value = Math.round(selectedElement.x);
+        inputs[1].value = Math.round(selectedElement.y);
+    }
+}
+
+function updateElProp(prop, value) {
+    if (!selectedElement) return;
+    if (['x','y','w','h'].includes(prop)) value = parseFloat(value);
+    const m = getCurrentMap();
+    for (const key of Object.keys(m.layers)) {
+        const el = m.layers[key].find(e => e.id === selectedElement.id);
+        if (el) { el[prop] = value; selectedElement[prop] = value; break; }
+    }
+    render();
+}
+
+function deleteSelected() {
+    if (selectedElement && !selectedElement.locked && confirm('确定删除此元素？')) {
+        deleteElement(selectedElement);
+    } else if (selectedElement && selectedElement.locked) {
+        showToast('该元素已锁定，无法删除');
+    }
+}
+
+function duplicateElement() {
+    if (!selectedElement) return;
+    const m = getCurrentMap();
+    const layer = selectedElement._layer;
+    const newEl = JSON.parse(JSON.stringify(selectedElement));
+    newEl.id = layer[0] + '_' + Date.now();
+    newEl.x += 20;
+    newEl.y += 20;
+    newEl.locked = false;
+    delete newEl._layer;
+    m.layers[layer].push(newEl);
+    selectedElement = { ...newEl, _layer: layer };
+    showPropPanel(selectedElement);
+    render();
+    updateStatus();
+    showToast('已复制');
+}
+
+// 渲染
+function render() {
+    const m = getCurrentMap();
+    if (!m) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 宣纸底色
+    ctx.fillStyle = '#f5f0e1';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 绘制各层
+    const drawLayer = (key, drawFn) => {
+        if (!layerVisibility[key]) return;
+        m.layers[key].forEach(el => {
+            drawFn(el);
+            // 锁定标记
+            if (el.locked) {
+                ctx.font = '16px serif';
+                ctx.fillStyle = '#c44536';
+                ctx.fillText('🔒', el.x + el.w - 14, el.y + 16);
+            }
+        });
+    };
+
+    // 地形
+    drawLayer('terrain', (t) => {
+        const img = assetImages['terrain/' + t.type];
+        if (img && img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, t.x, t.y, t.w, t.h);
+        } else {
+            ctx.fillStyle = '#7a8c5a';
+            ctx.fillRect(t.x, t.y, t.w, t.h);
+        }
+    });
+
+    // 建筑
+    drawLayer('building', (b) => {
+        const img = assetImages['building/' + b.type];
+        if (img && img.complete && img.naturalWidth > 0) {
+            // 阴影
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fillRect(b.x + 3, b.y + 3, b.w, b.h);
+            ctx.drawImage(img, b.x, b.y, b.w, b.h);
+        } else {
+            ctx.fillStyle = '#8b7355';
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+        }
+    });
+
+    // 装饰
+    drawLayer('decoration', (d) => {
+        let img;
+        if (d.isCustom) {
+            img = assetImages['custom/' + d.type];
+        } else {
+            img = assetImages['decoration/' + d.type];
+        }
+        if (img && img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, d.x, d.y, d.w, d.h);
+        } else {
+            ctx.font = '32px serif';
+            ctx.fillText('🌳', d.x + d.w/2, d.y + d.h/2);
+        }
+    });
+
+    // 碰撞
+    if (layerVisibility.collision) {
+        m.layers.collision.forEach(c => {
+            ctx.fillStyle = c.auto ? 'rgba(74,103,65,0.15)' : 'rgba(196,69,54,0.15)';
+            ctx.fillRect(c.x, c.y, c.w, c.h);
+            ctx.strokeStyle = c.auto ? '#4a6741' : '#c44536';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5,5]);
+            ctx.strokeRect(c.x, c.y, c.w, c.h);
+            ctx.setLineDash([]);
+        });
+    }
+
+    // 交互点
+    if (layerVisibility.interact) {
+        m.layers.interact.forEach(i => {
+            // 光晕
+            const gradient = ctx.createRadialGradient(i.x+i.w/2, i.y+i.h/2, 5, i.x+i.w/2, i.y+i.h/2, i.w);
+            gradient.addColorStop(0, 'rgba(184,134,11,0.3)');
+            gradient.addColorStop(1, 'rgba(184,134,11,0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(i.x-i.w/2, i.y-i.h/2, i.w*2, i.h*2);
+
+            let img;
+            if (i.isCustom) {
+                img = assetImages['custom/' + i.type];
+            } else {
+                img = assetImages['interact/' + i.type];
+            }
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, i.x, i.y, i.w, i.h);
+            } else {
+                ctx.beginPath();
+                ctx.arc(i.x+i.w/2, i.y+i.h/2, i.w/2, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(196,69,54,0.3)';
+                ctx.fill();
+                ctx.strokeStyle = '#c44536';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            // 名称
+            ctx.font = '14px KaiTi';
+            ctx.fillStyle = '#2c2c2c';
+            ctx.textAlign = 'center';
+            ctx.fillText(i.name || '', i.x + i.w/2, i.y + i.h + 18);
+            // 可交互标记
+            if (i.interactive) {
+                ctx.strokeStyle = '#c44536';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4,4]);
+                ctx.strokeRect(i.x-2, i.y-2, i.w+4, i.h+4);
+                ctx.setLineDash([]);
+            }
+        });
+    }
+
+    // 选中高亮
+    if (selectedElement) {
+        ctx.strokeStyle = selectedElement.locked ? '#888' : '#b8860b';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8,4]);
+        ctx.strokeRect(selectedElement.x-3, selectedElement.y-3, selectedElement.w+6, selectedElement.h+6);
+        ctx.setLineDash([]);
+        // 尺寸标注
+        ctx.font = '11px monospace';
+        ctx.fillStyle = '#b8860b';
+        ctx.fillText(`${Math.round(selectedElement.w)} × ${Math.round(selectedElement.h)}`, selectedElement.x, selectedElement.y - 8);
+    }
+
+    // 地图边框
+    ctx.strokeStyle = '#b8860b';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+}
+
+// 缩放视图
+function zoomIn() { zoom = Math.min(3, zoom*1.2); document.getElementById('zoomInfo').textContent = Math.round(zoom*100)+'%'; updateCanvasTransform(); }
+function zoomOut() { zoom = Math.max(0.2, zoom/1.2); document.getElementById('zoomInfo').textContent = Math.round(zoom*100)+'%'; updateCanvasTransform(); }
+function resetView() { zoom = 1; offsetX = 0; offsetY = 0; updateCanvasTransform(); document.getElementById('zoomInfo').textContent = '100%'; }
+
+// 保存/导出
+function saveAll() {
+    localStorage.setItem('xiuxian_maps_v2', JSON.stringify(maps));
+    localStorage.setItem('xiuxian_current_map', currentMapId);
+    showToast('全部地图已保存！');
+}
+
+function exportMap() {
+    const data = { maps, currentMapId, exportTime: new Date().toISOString(), customAssets: customAssets.map(a => ({id:a.id, name:a.name, width:a.width, height:a.height})) };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'xiuxian_maps.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('=== 地图数据 ===');
+    console.log(json);
+    showToast('地图已导出为JSON！');
+}
+
+function loadSaved() {
+    const data = localStorage.getItem('xiuxian_maps_v2');
+    if (data) {
+        maps = JSON.parse(data);
+        currentMapId = localStorage.getItem('xiuxian_current_map') || Object.keys(maps)[0];
+    }
+}
+
+// 状态
+function updateStatus() {
+    const m = getCurrentMap();
+    if (!m) return;
+    let total = 0, locked = 0;
+    for (const key of Object.keys(m.layers)) {
+        total += m.layers[key].length;
+        m.layers[key].forEach(el => { if (el.locked) locked++; });
+    }
+    document.getElementById('elementCount').textContent = total;
+    document.getElementById('lockedCount').textContent = locked;
+    document.getElementById('collisionCount').textContent = m.layers.collision.length;
+    document.getElementById('interactCount').textContent = m.layers.interact.length;
+}
+
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 2000);
+}
+
+// 初始化
+loadAssets();
+loadSaved();
+
+// 如果没有存档，创建默认空白地图
+if (Object.keys(maps).length === 0) {
+    maps['world_map'] = {
+        id: 'world_map', name: '修仙世界大地图',
+        width: 2400, height: 1800,
+        layers: { terrain: [], building: [], decoration: [], collision: [], interact: [] },
+        activeLayer: 'terrain'
+    };
+    maps['qingyun_sect'] = {
+        id: 'qingyun_sect', name: '青云宗内部',
+        width: 1600, height: 1200,
+        layers: { terrain: [], building: [], decoration: [], collision: [], interact: [] },
+        activeLayer: 'terrain'
+    };
+    currentMapId = 'world_map';
+}
+
+renderAssetPanels();
+refreshMapList();
+loadMapToCanvas();
+setupEvents();
+</script>
+</body>
+</html>

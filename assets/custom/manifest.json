@@ -1,0 +1,14 @@
+﻿{
+    "description":  "自定义素材配置文件 - 把图片放到对应文件夹后，在这里注册",
+    "version":  "1.0",
+    "assets":  [
+                   {
+                       "id":  "example",
+                       "name":  "示例素材",
+                       "width":  128,
+                       "height":  128,
+                       "category":  "宗门素材",
+                       "file":  "宗门素材/example.png"
+                   }
+               ]
+}

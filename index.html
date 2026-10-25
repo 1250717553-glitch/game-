@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修仙录 - 水墨风修仙游戏</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #game-container {
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        /* ===== 水墨风UI面板 ===== */
+        .ink-panel {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(245,240,225,0.92) 0%, rgba(232,220,195,0.92) 100%);
+            border: 2px solid #8b7355;
+            border-radius: 4px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.3), inset 0 0 20px rgba(139,115,85,0.1);
+            font-family: '楷体', KaiTi, serif;
+            color: #4a3728;
+            overflow: hidden;
+            z-index: 100;
+        }
+        .ink-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 28px;
+            background: linear-gradient(180deg, rgba(139,115,85,0.25) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(139,115,85,0.4);
+        }
+        .ink-panel .panel-title {
+            position: relative;
+            padding: 4px 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #c44536;
+            border-bottom: 1px solid rgba(139,115,85,0.3);
+            letter-spacing: 2px;
+        }
+        .ink-panel .panel-title::after {
+            content: '❖';
+            float: right;
+            color: #c9a84c;
+            font-size: 12px;
+        }
+        .ink-panel .panel-content {
+            padding: 10px 12px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        /* 任务面板 */
+        #panel-quest {
+            left: 20px;
+            top: 20px;
+            width: 320px;
+            max-height: 280px;
+            display: none; /* 用户编辑时width为0，默认隐藏 */
+        }
+        .quest-item {
+            padding: 6px 8px;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.4);
+            border-left: 3px solid #c9a84c;
+            border-radius: 2px;
+        }
+        .quest-item .quest-name {
+            font-weight: bold;
+            color: #8b4513;
+            font-size: 14px;
+        }
+        .quest-item .quest-desc {
+            color: #666;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        .quest-item .quest-progress {
+            color: #c44536;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        /* 背包面板 */
+        #panel-inventory {
+            left: 1032px;
+            top: 20px;
+            width: 300px;
+            max-height: 350px;
+            display: none; /* 用户编辑时width为0，默认隐藏 */
+        }
+        .inv-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+        }
+        .inv-slot {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.5);
+            border: 1px solid rgba(139,115,85,0.4);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            position: relative;
+        }
+        .inv-slot .item-count {
+            position: absolute;
+            bottom: 1px;
+            right: 3px;
+            font-size: 10px;
+            color: #4a3728;
+            font-family: Arial, sans-serif;
+        }
+        .inv-slot.quality-1 { border-color: #999; }
+        .inv-slot.quality-2 { border-color: #4ade80; box-shadow: 0 0 4px rgba(74,222,128,0.5); }
+        .inv-slot.quality-3 { border-color: #60a5fa; box-shadow: 0 0 4px rgba(96,165,250,0.5); }
+        .inv-slot.quality-4 { border-color: #facc15; box-shadow: 0 0 4px rgba(250,204,21,0.5); }
+        .inv-slot.quality-5 { border-color: #fb923c; box-shadow: 0 0 4px rgba(251,146,60,0.5); }
+        .inv-slot.quality-6 { border-color: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.6); }
+        /* 地图面板 */
+        #panel-map {
+            left: 0px;
+            top: -50px;
+            width: 0px;
+            display: none; /* 用户编辑时width为0，先隐藏 */
+        }
+        /* 品级颜色标签 */
+        .quality-tag {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 11px;
+            color: #fff;
+            margin-left: 4px;
+        }
+        .quality-tag.q1 { background: #999; }
+        .quality-tag.q2 { background: #4ade80; color: #333; }
+        .quality-tag.q3 { background: #60a5fa; }
+        .quality-tag.q4 { background: #facc15; color: #333; }
+        .quality-tag.q5 { background: #fb923c; }
+        .quality-tag.q6 { background: #ef4444; }
+        /* ===== 浮动按钮栏（右侧竖向排列） ===== */
+        #ui-buttons {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 200;
+        }
+        /* 收起状态：只显示展开按钮 */
+        #ui-buttons.collapsed .ui-btn:not(#btn-toggle) {
+            display: none;
+        }
+        #btn-toggle .btn-icon {
+            transition: transform 0.3s;
+        }
+        #ui-buttons.collapsed #btn-toggle .btn-icon {
+            transform: rotate(180deg);
+        }
+        .ui-btn {
+            width: 48px;
+            height: 72px;
+            background: linear-gradient(180deg, rgba(245,240,225,0.95) 0%, rgba(225,210,180,0.95) 100%);
+            border: 2px solid #5c4a32;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: '楷体', KaiTi, serif;
+            color: #3a2a1a;
+            transition: all 0.2s;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5);
+            user-select: none;
+            position: relative;
+        }
+        /* 按钮顶部装饰线 */
+        .ui-btn::before {
+            content: '';
+            position: absolute;
+            top: 4px; left: 6px; right: 6px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #8b7355, transparent);
+        }
+        .ui-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 4px; left: 6px; right: 6px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #8b7355, transparent);
+        }
+        .ui-btn:hover {
+            transform: translateX(-3px);
+            box-shadow: 4px 3px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+            border-color: #c44536;
+            background: linear-gradient(180deg, rgba(255,248,230,0.98) 0%, rgba(235,220,190,0.98) 100%);
+        }
+        .ui-btn:active {
+            transform: translateX(0);
+        }
+        .ui-btn.active {
+            background: linear-gradient(180deg, rgba(139,58,44,0.95) 0%, rgba(90,30,20,0.95) 100%);
+            color: #ffd700;
+            border-color: #c44536;
+        }
+        .ui-btn .btn-icon {
+            display: none;  /* 隐藏emoji图标，只用文字 */
+        }
+        .ui-btn .btn-text {
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            writing-mode: vertical-rl;  /* 竖排文字 */
+            text-orientation: upright;
+        }
+        /* ===== 功法面板 ===== */
+        #panel-manual {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 700px;
+            max-height: 500px;
+            background: linear-gradient(135deg, rgba(245,240,225,0.97) 0%, rgba(232,220,195,0.97) 100%);
+            border: 3px solid #8b7355;
+            border-radius: 8px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(139,115,85,0.1);
+            font-family: '楷体', KaiTi, serif;
+            color: #4a3728;
+            z-index: 300;
+            display: none;
+            overflow: hidden;
+        }
+        #panel-manual::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 40px;
+            background: linear-gradient(180deg, rgba(139,115,85,0.3) 0%, transparent 100%);
+            border-bottom: 2px solid rgba(139,115,85,0.4);
+        }
+        .manual-header {
+            position: relative;
+            padding: 8px 20px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #c44536;
+            letter-spacing: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .manual-close {
+            cursor: pointer;
+            font-size: 20px;
+            color: #8b7355;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .manual-close:hover {
+            background: rgba(196,69,54,0.2);
+            color: #c44536;
+        }
+        .manual-body {
+            display: flex;
+            padding: 15px;
+            gap: 15px;
+            height: 420px;
+        }
+        .manual-list {
+            width: 220px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(139,115,85,0.3);
+            padding-right: 10px;
+        }
+        .manual-item {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.5);
+            border: 1px solid rgba(139,115,85,0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .manual-item:hover {
+            background: rgba(196,69,54,0.1);
+            border-color: #c44536;
+        }
+        .manual-item.selected {
+            background: rgba(196,69,54,0.15);
+            border-color: #c44536;
+            border-left: 4px solid #c44536;
+        }
+        .manual-item.equipped {
+            border-color: #c9a84c;
+            background: rgba(201,168,76,0.1);
+        }
+        .manual-item .m-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #8b4513;
+        }
+        .manual-item .m-level {
+            font-size: 11px;
+            color: #666;
+            margin-top: 3px;
+        }
+        .manual-item .m-tag {
+            display: inline-block;
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 2px;
+            margin-left: 5px;
+            color: #fff;
+        }
+        .manual-detail {
+            flex: 1;
+            overflow-y: auto;
+            padding-left: 10px;
+        }
+        .detail-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #c44536;
+            margin-bottom: 10px;
+        }
+        .detail-section {
+            margin-bottom: 15px;
+        }
+        .detail-section h4 {
+            font-size: 15px;
+            color: #8b4513;
+            margin: 0 0 6px 0;
+            border-bottom: 1px solid rgba(139,115,85,0.3);
+            padding-bottom: 3px;
+        }
+        .detail-section p {
+            font-size: 13px;
+            line-height: 1.8;
+            color: #4a3728;
+            margin: 0;
+        }
+        .proficiency-bar {
+            height: 16px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 5px 0;
+            position: relative;
+        }
+        .proficiency-fill {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.3s;
+        }
+        .proficiency-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 11px;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            font-family: Arial, sans-serif;
+        }
+        .skill-list-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 4px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(139,115,85,0.2);
+        }
+        .skill-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .skill-info {
+            flex: 1;
+        }
+        .skill-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #4a3728;
+        }
+        .skill-desc {
+            font-size: 11px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .equip-btn {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #c44536 0%, #8b3a2c 100%);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: '楷体', KaiTi, serif;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        .equip-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(196,69,54,0.4);
+        }
+        .equip-btn:disabled {
+            background: #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* 遮罩层 */
+        #ui-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.3);
+            z-index: 250;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- ===== 水墨风UI面板（用户编辑的布局） ===== -->
+        <!-- 任务面板 -->
+        <div id="panel-quest" class="ink-panel">
+            <div class="panel-title">任务录</div>
+            <div class="panel-content" id="quest-content">
+                <div class="quest-item">
+                    <div class="quest-name">入门试炼：采集10株聚灵草</div>
+                    <div class="quest-desc">在宗门药园种植并收获聚灵草</div>
+                    <div class="quest-progress">进度：0/10</div>
+                </div>
+                <div class="quest-item">
+                    <div class="quest-name">修炼初成：突破至练气三层</div>
+                    <div class="quest-desc">在练功台修炼，积累修为突破境界</div>
+                    <div class="quest-progress">状态：进行中</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 背包面板 -->
+        <div id="panel-inventory" class="ink-panel">
+            <div class="panel-title">百宝囊</div>
+            <div class="panel-content">
+                <div class="inv-grid" id="inv-grid">
+                    <!-- 背包格子由JS动态生成 -->
+                </div>
+                <div style="margin-top:8px; font-size:12px; color:#888;">
+                    按 B 键打开详细背包
+                </div>
+            </div>
+        </div>
+
+        <!-- 地图面板（用户编辑时width为0，先隐藏） -->
+        <div id="panel-map" class="ink-panel">
+            <div class="panel-title">天下图</div>
+            <div class="panel-content">
+                地图功能开发中...
+            </div>
+        </div>
+
+        <!-- 功法面板（点击功法按钮打开） -->
+        <div id="panel-manual">
+            <div class="manual-header">
+                <span>📜 功法秘籍</span>
+                <span class="manual-close" onclick="ManualUIManager.close()">✕</span>
+            </div>
+            <div class="manual-body">
+                <div class="manual-list" id="manual-list"></div>
+                <div class="manual-detail" id="manual-detail">
+                    <div style="text-align:center; color:#999; padding-top:100px;">
+                        点击左侧功法查看详情
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 遮罩层（点击关闭弹窗） -->
+        <div id="ui-overlay" onclick="ManualUIManager.close()"></div>
+
+        <!-- 存档管理面板（HTML按钮，确保点击不被遮挡） -->
+        <div id="save-manager-panel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:rgba(0,0,0,0.6); font-family:'楷体',KaiTi,serif;">
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:560px; background:#f5f0e1; border:3px solid #3a6b8c; border-radius:8px; padding:20px; box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+                <div style="text-align:center; font-size:26px; color:#3a6b8c; margin-bottom:5px;">【 存档管理 】</div>
+                <div id="save-current-slot" style="text-align:center; font-size:13px; color:#666; margin-bottom:15px;"></div>
+                <div id="save-slots-container"></div>
+                <div style="text-align:center; margin-top:15px;">
+                    <button onclick="window.closeSaveManager()" style="padding:10px 40px; font-size:17px; font-family:'楷体',KaiTi,serif; background:#8b7355; color:#fff; border:2px solid #4a3728; border-radius:4px; cursor:pointer;">← 返回菜单</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 浮动按钮栏 -->
+        <div id="ui-buttons">
+            <div class="ui-btn" id="btn-toggle" onclick="UIManager.toggleUIButtons()">
+                <span class="btn-icon">▶</span>
+                <span class="btn-text">收起</span>
+            </div>
+            <div class="ui-btn" id="btn-quest" onclick="UIManager.togglePanel('quest')">
+                <span class="btn-icon">📋</span>
+                <span class="btn-text">任务</span>
+            </div>
+            <div class="ui-btn" id="btn-inventory" onclick="if(window.inventoryUI) window.inventoryUI.toggle()">
+                <span class="btn-icon">🎒</span>
+                <span class="btn-text">储物</span>
+            </div>
+            <div class="ui-btn" id="btn-manual" onclick="ManualUIManager.toggle()">
+                <span class="btn-icon">📜</span>
+                <span class="btn-text">功法</span>
+            </div>
+            <div class="ui-btn" id="btn-map" onclick="UIManager.togglePanel('map')">
+                <span class="btn-icon">🗺</span>
+                <span class="btn-text">地图</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 图片资源（base64内嵌，解决本地file://协议CORS限制） ===== -->
+    <script src="assets/images/player/player_data.js"></script>
+    <script src="assets/images/monsters/monsters_data.js"></script>
+    <script src="assets/images/items/items_data.js"></script>
+    <script src="assets/images/scenes/scenes_data.js"></script>
+    <script src="assets/images/plants/plants_data.js"></script>
+    <script src="assets/images/farm_data.js"></script>
+    <script src="assets/images/sect_data.js"></script>
+
+    <!-- ===== 配置层 ===== -->
+    <script src="src/config/constants.js"></script>
+
+    <!-- ===== 核心系统层 ===== -->
+    <script src="src/systems/EventBus.js"></script>
+    <script src="src/systems/SaveSystem.js"></script>
+
+    <!-- ===== 背包系统 ===== -->
+    <script src="src/inventory/Inventory.js"></script>
+    <script src="src/inventory/InventoryUI.js"></script>
+
+    <!-- ===== 界面组件层 ===== -->
+    <script src="src/ui/StatusBar.js"></script>
+    <script src="src/ui/UIPanelManager.js"></script>
+    <script src="src/ui/UIManager.js"></script>
+    <script src="src/ui/ManualUIManager.js"></script>
+
+    <!-- ===== 种田系统 ===== -->
+    <script src="src/farm/FarmManager.js"></script>
+
+    <!-- ===== 游戏模块层 ===== -->
+    <script src="src/modules/player/Player.js"></script>
+
+    <!-- ===== 场景层 ===== -->
+    <script src="src/scenes/BootScene.js"></script>
+    <script src="src/scenes/PreloadScene.js"></script>
+    <script src="src/scenes/LoginScene.js"></script>
+    <script src="src/scenes/BaseMapScene.js"></script>
+    <script src="src/scenes/WorldMapScene.js"></script>
+    <script src="src/scenes/DongfuScene.js"></script>
+    <script src="src/scenes/FarmScene.js"></script>
+    <script src="src/scenes/TrainingGroundScene.js"></script>
+    <script src="src/scenes/SectHallScene.js"></script>
+    <script src="src/scenes/GongfaPavilionScene.js"></script>
+
+    <!-- ===== 战斗系统（单独文件夹，方便更新） ===== -->
+    <script src="src/battle/BattleScene.js"></script>
+
+    <!-- ===== 编辑器 ===== -->
+    <script src="src/editor/EditorScene.js"></script>
+
+    <!-- ===== 游戏总入口 ===== -->
+    <script src="src/main.js"></script>
+</body>
+</html>

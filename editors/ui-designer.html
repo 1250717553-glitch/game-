@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>修仙录 - 水墨风UI设计器</title>
+<style>
+/* ============================================================
+   【全局样式】水墨风基础
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --ink-black: #2c2c2c;       /* 墨黑 */
+    --paper-white: #f5f0e1;     /* 宣纸白 */
+    --ash-gray: #8b8680;        /* 烟灰 */
+    --ochre: #b8860b;           /* 赭石 */
+    --ink-green: #4a6741;       /* 墨绿 */
+    --cinnabar: #c44536;        /* 朱砂红 */
+    --light-ink: rgba(44,44,44,0.1);
+}
+
+body {
+    font-family: 'KaiTi', '楷体', 'STKaiti', serif;
+    background: var(--paper-white);
+    color: var(--ink-black);
+    overflow: hidden;
+    user-select: none;
+    height: 100vh;
+}
+
+/* ============================================================
+   【宣纸纹理背景】用CSS渐变模拟
+   ============================================================ */
+.paper-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background:
+        radial-gradient(ellipse at 20% 30%, rgba(139,134,128,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 70%, rgba(139,134,128,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(184,134,11,0.03) 0%, transparent 70%),
+        linear-gradient(135deg, #f7f2e3 0%, #f0e8d5 50%, #f5f0e1 100%);
+    z-index: 0;
+}
+
+/* 泼墨效果 */
+.ink-splash {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(3px);
+    opacity: 0.04;
+    z-index: 1;
+    pointer-events: none;
+}
+.ink-splash:nth-child(1) { width: 300px; height: 200px; background: var(--ink-black); top: 10%; left: 5%; transform: rotate(-15deg); }
+.ink-splash:nth-child(2) { width: 250px; height: 180px; background: var(--ink-green); bottom: 15%; right: 8%; transform: rotate(20deg); }
+.ink-splash:nth-child(3) { width: 200px; height: 150px; background: var(--ochre); top: 60%; left: 40%; transform: rotate(45deg); }
+
+/* ============================================================
+   【顶部工具栏】编辑模式控制
+   ============================================================ */
+.toolbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 50px;
+    background: linear-gradient(180deg, rgba(44,44,44,0.95) 0%, rgba(44,44,44,0.85) 100%);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 1000;
+    border-bottom: 2px solid var(--ochre);
+}
+
+.toolbar-title {
+    font-family: 'STXingkai', '华文行楷', 'KaiTi', serif;
+    font-size: 24px;
+    color: var(--paper-white);
+    margin-right: 30px;
+    letter-spacing: 4px;
+}
+
+.toolbar-btn {
+    padding: 6px 18px;
+    margin-right: 10px;
+    background: transparent;
+    border: 1px solid var(--ash-gray);
+    color: var(--paper-white);
+    font-family: 'KaiTi', serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-radius: 2px;
+}
+.toolbar-btn:hover {
+    border-color: var(--ochre);
+    color: var(--ochre);
+    box-shadow: 0 0 8px rgba(184,134,11,0.3);
+}
+.toolbar-btn.active {
+    background: var(--cinnabar);
+    border-color: var(--cinnabar);
+    color: white;
+}
+
+.toolbar-hint {
+    margin-left: auto;
+    color: var(--ash-gray);
+    font-size: 12px;
+}
+
+/* ============================================================
+   【游戏画布区域】模拟游戏主画面
+   ============================================================ */
+.game-canvas {
+    position: fixed;
+    top: 50px; left: 0; right: 0; bottom: 0;
+    z-index: 2;
+    overflow: hidden;
+}
+
+/* 模拟游戏场景 - 水墨山水 */
+.scene-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background:
+        linear-gradient(180deg, rgba(245,240,225,0.3) 0%, rgba(139,134,128,0.1) 100%);
+}
+
+/* 远山 */
+.mountain {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 40%;
+    background:
+        linear-gradient(180deg, transparent 0%, rgba(74,103,65,0.15) 100%);
+    clip-path: polygon(0% 100%, 0% 60%, 15% 40%, 25% 55%, 40% 30%, 55% 50%, 70% 25%, 85% 45%, 100% 35%, 100% 100%);
+}
+.mountain-2 {
+    height: 30%;
+    opacity: 0.5;
+    clip-path: polygon(0% 100%, 0% 70%, 20% 50%, 35% 65%, 50% 45%, 65% 60%, 80% 40%, 100% 55%, 100% 100%);
+}
+
+/* 云纹 */
+.cloud {
+    position: absolute;
+    background: rgba(255,255,255,0.4);
+    border-radius: 50%;
+    filter: blur(10px);
+}
+.cloud:nth-child(1) { width: 200px; height: 40px; top: 15%; left: 10%; }
+.cloud:nth-child(2) { width: 150px; height: 30px; top: 25%; right: 15%; }
+.cloud:nth-child(3) { width: 180px; height: 35px; top: 10%; left: 50%; }
+
+/* 模拟玩家角色 */
+.player-char {
+    position: absolute;
+    width: 40px; height: 50px;
+    left: 50%; top: 55%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+}
+.player-char::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 20px; height: 20px;
+    background: #e8d5b7;
+    border-radius: 50%;
+    border: 2px solid var(--ink-black);
+}
+.player-char::after {
+    content: '';
+    position: absolute;
+    top: 18px; left: 50%;
+    transform: translateX(-50%);
+    width: 30px; height: 32px;
+    background: linear-gradient(180deg, #6b6b6b 0%, #4a4a4a 100%);
+    border-radius: 5px 5px 0 0;
+    border: 1px solid var(--ink-black);
+}
+
+/* ============================================================
+   【面板通用样式】水墨风面板
+   ============================================================ */
+.panel {
+    position: absolute;
+    min-width: 280px;
+    min-height: 200px;
+    background: linear-gradient(135deg, rgba(245,240,225,0.97) 0%, rgba(240,232,213,0.97) 100%);
+    border: 2px solid var(--ink-black);
+    border-radius: 4px;
+    box-shadow:
+        0 4px 20px rgba(0,0,0,0.2),
+        inset 0 0 30px rgba(139,134,128,0.1);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.3s;
+}
+
+/* 面板四角装饰 - 毛笔笔触 */
+.panel::before,
+.panel::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    border: 2px solid var(--cinnabar);
+    pointer-events: none;
+}
+.panel::before {
+    top: -2px; left: -2px;
+    border-right: none;
+    border-bottom: none;
+}
+.panel::after {
+    bottom: -2px; right: -2px;
+    border-left: none;
+    border-top: none;
+}
+
+/* 编辑模式下可拖拽 */
+.edit-mode .panel {
+    cursor: move;
+    outline: 2px dashed var(--cinnabar);
+    outline-offset: 4px;
+}
+.edit-mode .panel:hover {
+    box-shadow: 0 0 20px rgba(196,69,54,0.4);
+}
+
+/* 面板标题栏 */
+.panel-header {
+    padding: 10px 15px;
+    background: linear-gradient(90deg, rgba(44,44,44,0.9) 0%, rgba(44,44,44,0.7) 100%);
+    border-bottom: 1px solid var(--ochre);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: move;
+}
+
+.panel-title {
+    font-family: 'STXingkai', '华文行楷', 'KaiTi', serif;
+    font-size: 20px;
+    color: var(--paper-white);
+    letter-spacing: 3px;
+}
+
+.panel-title::before {
+    content: '❖';
+    color: var(--ochre);
+    margin-right: 8px;
+}
+
+/* 印章装饰 */
+.seal {
+    display: inline-block;
+    width: 24px; height: 24px;
+    background: var(--cinnabar);
+    color: white;
+    font-size: 12px;
+    text-align: center;
+    line-height: 24px;
+    border-radius: 2px;
+    font-family: 'KaiTi', serif;
+    transform: rotate(-5deg);
+}
+
+/* 面板内容区 */
+.panel-body {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+/* 滚动条美化 */
+.panel-body::-webkit-scrollbar { width: 6px; }
+.panel-body::-webkit-scrollbar-track { background: rgba(139,134,128,0.1); }
+.panel-body::-webkit-scrollbar-thumb { background: var(--ash-gray); border-radius: 3px; }
+
+/* ============================================================
+   【任务面板】
+   ============================================================ */
+.quest-item {
+    padding: 12px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.5);
+    border-left: 3px solid var(--ink-green);
+    border-radius: 0 4px 4px 0;
+    transition: all 0.3s;
+}
+.quest-item:hover {
+    background: rgba(255,255,255,0.8);
+    border-left-color: var(--cinnabar);
+    transform: translateX(3px);
+}
+
+.quest-name {
+    font-family: 'STXingkai', '华文行楷', 'KaiTi', serif;
+    font-size: 17px;
+    color: var(--ink-black);
+    margin-bottom: 5px;
+}
+
+.quest-desc {
+    font-size: 13px;
+    color: var(--ash-gray);
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.quest-progress-bar {
+    height: 8px;
+    background: rgba(139,134,128,0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+.quest-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--ink-green) 0%, #6b8c5a 100%);
+    border-radius: 4px;
+    transition: width 0.5s;
+}
+
+.quest-progress-text {
+    font-size: 11px;
+    color: var(--ash-gray);
+    text-align: right;
+}
+
+.quest-reward {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--ochre);
+}
+.quest-reward::before { content: '奖励：'; }
+
+/* ============================================================
+   【背包面板】
+   ============================================================ */
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.inventory-slot {
+    aspect-ratio: 1;
+    background: rgba(255,255,255,0.4);
+    border: 1px solid var(--ash-gray);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+.inventory-slot:hover {
+    background: rgba(255,255,255,0.8);
+    border-color: var(--ochre);
+    transform: scale(1.05);
+    box-shadow: 0 2px 10px rgba(184,134,11,0.3);
+}
+
+.inventory-slot.empty {
+    background: rgba(139,134,128,0.05);
+    border-style: dashed;
+    cursor: default;
+}
+.inventory-slot.empty:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.item-icon {
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+.item-name {
+    font-size: 10px;
+    color: var(--ink-black);
+    text-align: center;
+    line-height: 1.2;
+}
+.item-count {
+    position: absolute;
+    bottom: 2px; right: 4px;
+    font-size: 11px;
+    color: var(--cinnabar);
+    font-weight: bold;
+}
+
+/* 物品品质边框 */
+.inventory-slot.quality-common { border-color: var(--ash-gray); }
+.inventory-slot.quality-rare { border-color: var(--ink-green); box-shadow: inset 0 0 8px rgba(74,103,65,0.2); }
+.inventory-slot.quality-epic { border-color: var(--ochre); box-shadow: inset 0 0 8px rgba(184,134,11,0.2); }
+
+/* ============================================================
+   【地图面板】
+   ============================================================ */
+.map-location {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.4);
+    border: 1px solid var(--ash-gray);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.map-location:hover {
+    background: rgba(255,255,255,0.8);
+    border-color: var(--cinnabar);
+    transform: translateX(5px);
+}
+.map-location.active {
+    background: rgba(196,69,54,0.1);
+    border-color: var(--cinnabar);
+}
+
+.location-name {
+    font-family: 'STXingkai', '华文行楷', 'KaiTi', serif;
+    font-size: 18px;
+    color: var(--ink-black);
+    margin-bottom: 4px;
+}
+.location-name::before {
+    content: '◈';
+    color: var(--ochre);
+    margin-right: 6px;
+}
+
+.location-desc {
+    font-size: 12px;
+    color: var(--ash-gray);
+    line-height: 1.5;
+    display: none;
+}
+.map-location.active .location-desc {
+    display: block;
+}
+
+.location-status {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--cinnabar);
+    font-style: italic;
+}
+
+/* ============================================================
+   【底部状态栏】
+   ============================================================ */
+.status-bar {
+    position: absolute;
+    bottom: 10px; left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    padding: 8px 25px;
+    background: rgba(44,44,44,0.85);
+    border: 1px solid var(--ochre);
+    border-radius: 20px;
+    z-index: 8;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--paper-white);
+    font-size: 13px;
+}
+.status-label { color: var(--ochre); }
+.status-value { min-width: 40px; }
+
+.hp-bar, .qi-bar, .exp-bar {
+    width: 80px; height: 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.hp-fill { height: 100%; background: var(--cinnabar); width: 75%; }
+.qi-fill { height: 100%; background: #3a6b8c; width: 60%; }
+.exp-fill { height: 100%; background: var(--ochre); width: 35%; }
+
+/* ============================================================
+   【功能按钮组】右侧
+   ============================================================ */
+.action-buttons {
+    position: absolute;
+    right: 20px; top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 8;
+}
+
+.action-btn {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, rgba(245,240,225,0.95) 0%, rgba(240,232,213,0.95) 100%);
+    border: 2px solid var(--ink-black);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+.action-btn:hover {
+    transform: scale(1.1);
+    border-color: var(--cinnabar);
+    box-shadow: 0 4px 15px rgba(196,69,54,0.3);
+}
+.action-btn:active {
+    transform: scale(0.95);
+}
+.action-btn-icon { font-size: 22px; }
+.action-btn-text {
+    font-size: 10px;
+    color: var(--ink-black);
+    margin-top: 2px;
+}
+
+/* ============================================================
+   【编辑模式提示】
+   ============================================================ */
+.edit-hint {
+    position: fixed;
+    top: 60px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(196,69,54,0.9);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 999;
+    display: none;
+    animation: pulse 2s infinite;
+}
+.edit-mode .edit-hint { display: block; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* 位置信息显示 */
+.position-info {
+    position: fixed;
+    bottom: 10px; right: 10px;
+    background: rgba(0,0,0,0.7);
+    color: #0f0;
+    padding: 5px 10px;
+    font-family: monospace;
+    font-size: 11px;
+    border-radius: 3px;
+    z-index: 999;
+    display: none;
+}
+.edit-mode .position-info { display: block; }
+
+/* ============================================================
+   【淡入动画】
+   ============================================================ */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.panel { animation: fadeIn 0.5s ease-out; }
+
+</style>
+</head>
+<body>
+
+<!-- 宣纸背景 -->
+<div class="paper-bg"></div>
+<div class="ink-splash"></div>
+<div class="ink-splash"></div>
+<div class="ink-splash"></div>
+
+<!-- 顶部工具栏 -->
+<div class="toolbar">
+    <div class="toolbar-title">修仙录 · UI设计器</div>
+    <button class="toolbar-btn" id="btnEdit" onclick="toggleEditMode()">✎ 编辑布局</button>
+    <button class="toolbar-btn" onclick="saveLayout()">💾 保存布局</button>
+    <button class="toolbar-btn" onclick="loadLayout()">📂 读取布局</button>
+    <button class="toolbar-btn" onclick="resetLayout()">↺ 重置默认</button>
+    <button class="toolbar-btn" onclick="exportLayout()">📤 导出JSON</button>
+    <div class="toolbar-hint">编辑模式下拖拽面板调整位置 | 保存后告诉我，我来应用到游戏</div>
+</div>
+
+<!-- 编辑提示 -->
+<div class="edit-hint">✎ 编辑模式：拖拽面板调整位置，调整完点击"保存布局"</div>
+
+<!-- 位置信息 -->
+<div class="position-info" id="positionInfo">拖拽面板查看坐标</div>
+
+<!-- 游戏画布 -->
+<div class="game-canvas" id="gameCanvas">
+
+    <!-- 模拟场景 -->
+    <div class="scene-bg">
+        <div class="cloud"></div>
+        <div class="cloud"></div>
+        <div class="cloud"></div>
+        <div class="mountain mountain-2"></div>
+        <div class="mountain"></div>
+    </div>
+
+    <!-- 模拟玩家 -->
+    <div class="player-char"></div>
+
+    <!-- ===== 任务面板 ===== -->
+    <div class="panel" id="panelQuest" style="left: 20px; top: 20px; width: 320px;">
+        <div class="panel-header">
+            <div class="panel-title">任务录</div>
+            <div class="seal">任</div>
+        </div>
+        <div class="panel-body">
+            <div class="quest-item">
+                <div class="quest-name">入门试炼</div>
+                <div class="quest-desc">采集10株聚灵草，献给宗门药园。</div>
+                <div class="quest-progress-bar">
+                    <div class="quest-progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="quest-progress-text">进度：0/10</div>
+                <div class="quest-reward">灵石x50、经验x100</div>
+            </div>
+            <div class="quest-item">
+                <div class="quest-name">修炼初成</div>
+                <div class="quest-desc">突破至练气三层，稳固根基。</div>
+                <div class="quest-progress-bar">
+                    <div class="quest-progress-fill" style="width: 66%"></div>
+                </div>
+                <div class="quest-progress-text">进度：练气二层 / 练气三层</div>
+                <div class="quest-reward">聚气丹x2、功法残页x1</div>
+            </div>
+            <div class="quest-item">
+                <div class="quest-name">妖兽来袭</div>
+                <div class="quest-desc">前往妖兽森林，击败3只野狼妖。</div>
+                <div class="quest-progress-bar">
+                    <div class="quest-progress-fill" style="width: 33%"></div>
+                </div>
+                <div class="quest-progress-text">进度：1/3</div>
+                <div class="quest-reward">野狼皮x3、炼器经验x50</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 背包面板 ===== -->
+    <div class="panel" id="panelInventory" style="right: 100px; top: 20px; width: 300px;">
+        <div class="panel-header">
+            <div class="panel-title">储物袋</div>
+            <div class="seal">物</div>
+        </div>
+        <div class="panel-body">
+            <div class="inventory-grid">
+                <div class="inventory-slot quality-common">
+                    <div class="item-icon">🌿</div>
+                    <div class="item-name">聚灵草</div>
+                    <div class="item-count">x5</div>
+                </div>
+                <div class="inventory-slot quality-rare">
+                    <div class="item-icon">💎</div>
+                    <div class="item-name">灵石</div>
+                    <div class="item-count">x3</div>
+                </div>
+                <div class="inventory-slot quality-epic">
+                    <div class="item-icon">🔮</div>
+                    <div class="item-name">聚气丹</div>
+                    <div class="item-count">x1</div>
+                </div>
+                <div class="inventory-slot quality-common">
+                    <div class="item-icon">🌾</div>
+                    <div class="item-name">灵稻</div>
+                    <div class="item-count">x8</div>
+                </div>
+                <div class="inventory-slot quality-common">
+                    <div class="item-icon">🍵</div>
+                    <div class="item-name">灵茶</div>
+                    <div class="item-count">x2</div>
+                </div>
+                <div class="inventory-slot quality-rare">
+                    <div class="item-icon">🐺</div>
+                    <div class="item-name">野狼皮</div>
+                    <div class="item-count">x3</div>
+                </div>
+                <div class="inventory-slot empty"></div>
+                <div class="inventory-slot empty"></div>
+                <div class="inventory-slot empty"></div>
+                <div class="inventory-slot empty"></div>
+                <div class="inventory-slot empty"></div>
+                <div class="inventory-slot empty"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 地图面板（显示地图编辑器设计的地图） ===== -->
+    <div class="panel" id="panelMap" style="left: 50%; top: 50%; transform: translate(-50%, -50%); width: 600px; height: 480px; display:none;">
+        <div class="panel-header">
+            <div class="panel-title">山河图</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button onclick="loadCustomMap()" style="padding:3px 10px; background:#4a6741; border:1px solid #5a7751; color:#fff; font-family:KaiTi; font-size:12px; cursor:pointer; border-radius:3px;">加载地图</button>
+                <select id="mapSelect" onchange="renderCustomMap()" style="padding:3px 8px; background:#2a2a2a; color:#f5f0e1; border:1px solid #555; font-family:KaiTi; font-size:12px; border-radius:3px;">
+                    <option value="">选择地图</option>
+                </select>
+                <div class="seal">图</div>
+            </div>
+        </div>
+        <div class="panel-body" style="padding:0; position:relative; overflow:hidden;">
+            <canvas id="customMapCanvas" width="560" height="380" style="display:block; background:#f5f0e1;"></canvas>
+            <div id="mapHint" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#888; font-size:14px; text-align:center;">
+                点击"加载地图"按钮<br>加载地图编辑器中设计的地图
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 底部状态栏 ===== -->
+    <div class="status-bar">
+        <div class="status-item">
+            <span class="status-label">气血</span>
+            <div class="hp-bar"><div class="hp-fill"></div></div>
+            <span class="status-value">75/100</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">灵气</span>
+            <div class="qi-bar"><div class="qi-fill"></div></div>
+            <span class="status-value">3/5</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">经验</span>
+            <div class="exp-bar"><div class="exp-fill"></div></div>
+            <span class="status-value">35/100</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">境界</span>
+            <span class="status-value" style="color: #c9a84c;">练气二层</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">寿元</span>
+            <span class="status-value">98</span>
+        </div>
+    </div>
+
+    <!-- ===== 右侧功能按钮 ===== -->
+    <div class="action-buttons">
+        <div class="action-btn" onclick="togglePanel('panelQuest')">
+            <div class="action-btn-icon">📜</div>
+            <div class="action-btn-text">任务</div>
+        </div>
+        <div class="action-btn" onclick="togglePanel('panelInventory')">
+            <div class="action-btn-icon">🎒</div>
+            <div class="action-btn-text">背包</div>
+        </div>
+        <div class="action-btn" onclick="togglePanel('panelMap')">
+            <div class="action-btn-icon">🗺️</div>
+            <div class="action-btn-text">地图</div>
+        </div>
+        <div class="action-btn">
+            <div class="action-btn-icon">⚔️</div>
+            <div class="action-btn-text">战斗</div>
+        </div>
+        <div class="action-btn">
+            <div class="action-btn-icon">📖</div>
+            <div class="action-btn-text">功法</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/* ============================================================
+   【UI设计器逻辑】
+   ============================================================ */
+
+let isEditMode = false;
+let dragTarget = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+// 切换编辑模式
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    document.body.classList.toggle('edit-mode', isEditMode);
+    document.getElementById('btnEdit').classList.toggle('active', isEditMode);
+
+    if (isEditMode) {
+        enableDrag();
+    } else {
+        disableDrag();
+    }
+}
+
+// 启用拖拽
+function enableDrag() {
+    const panels = document.querySelectorAll('.panel');
+    panels.forEach(panel => {
+        panel.addEventListener('mousedown', startDrag);
+    });
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', stopDrag);
+}
+
+// 禁用拖拽
+function disableDrag() {
+    const panels = document.querySelectorAll('.panel');
+    panels.forEach(panel => {
+        panel.removeEventListener('mousedown', startDrag);
+    });
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', stopDrag);
+}
+
+// 开始拖拽
+function startDrag(e) {
+    if (!isEditMode) return;
+    dragTarget = e.currentTarget;
+    const rect = dragTarget.getBoundingClientRect();
+    const canvasRect = document.getElementById('gameCanvas').getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    dragTarget.style.zIndex = 100;
+    e.preventDefault();
+}
+
+// 拖拽中
+function onDrag(e) {
+    if (!dragTarget || !isEditMode) return;
+    const canvasRect = document.getElementById('gameCanvas').getBoundingClientRect();
+    let x = e.clientX - canvasRect.left - dragOffsetX;
+    let y = e.clientY - canvasRect.top - dragOffsetY;
+
+    // 限制在画布内
+    x = Math.max(0, Math.min(x, canvasRect.width - dragTarget.offsetWidth));
+    y = Math.max(0, Math.min(y, canvasRect.height - dragTarget.offsetHeight));
+
+    // 清除right，用left定位
+    dragTarget.style.left = x + 'px';
+    dragTarget.style.top = y + 'px';
+    dragTarget.style.right = 'auto';
+    dragTarget.style.bottom = 'auto';
+
+    // 显示位置信息
+    document.getElementById('positionInfo').textContent =
+        `${dragTarget.id}: left=${Math.round(x)}px, top=${Math.round(y)}px`;
+}
+
+// 停止拖拽
+function stopDrag() {
+    if (dragTarget) {
+        dragTarget.style.zIndex = '';
+        dragTarget = null;
+    }
+}
+
+// 保存布局到localStorage
+function saveLayout() {
+    const layout = {};
+    document.querySelectorAll('.panel').forEach(panel => {
+        const canvasRect = document.getElementById('gameCanvas').getBoundingClientRect();
+        const rect = panel.getBoundingClientRect();
+        layout[panel.id] = {
+            left: Math.round(rect.left - canvasRect.left),
+            top: Math.round(rect.top - canvasRect.top),
+            width: panel.offsetWidth,
+            height: panel.offsetHeight
+        };
+    });
+    localStorage.setItem('xiuxian_ui_layout', JSON.stringify(layout));
+    alert('布局已保存！\n\n你可以继续调整，或点击"导出JSON"把布局发给我。');
+}
+
+// 读取布局
+function loadLayout() {
+    const data = localStorage.getItem('xiuxian_ui_layout');
+    if (!data) {
+        alert('没有保存的布局');
+        return;
+    }
+    const layout = JSON.parse(data);
+    Object.keys(layout).forEach(id => {
+        const panel = document.getElementById(id);
+        if (panel && layout[id]) {
+            panel.style.left = layout[id].left + 'px';
+            panel.style.top = layout[id].top + 'px';
+            panel.style.width = layout[id].width + 'px';
+            panel.style.right = 'auto';
+            panel.style.bottom = 'auto';
+        }
+    });
+    alert('布局已读取');
+}
+
+// 重置默认布局
+function resetLayout() {
+    if (!confirm('确定要重置为默认布局吗？')) return;
+    localStorage.removeItem('xiuxian_ui_layout');
+    location.reload();
+}
+
+// 导出布局JSON
+function exportLayout() {
+    const layout = {};
+    document.querySelectorAll('.panel').forEach(panel => {
+        const canvasRect = document.getElementById('gameCanvas').getBoundingClientRect();
+        const rect = panel.getBoundingClientRect();
+        layout[panel.id] = {
+            left: Math.round(rect.left - canvasRect.left),
+            top: Math.round(rect.top - canvasRect.top),
+            width: panel.offsetWidth
+        };
+    });
+    const json = JSON.stringify(layout, null, 2);
+    console.log('=== UI布局JSON ===');
+    console.log(json);
+    prompt('复制下面的JSON发给我，我会应用到游戏中：', json);
+}
+
+// 切换面板显示/隐藏
+function togglePanel(panelId) {
+    const panel = document.getElementById(panelId);
+    if (panel) {
+        const isHidden = panel.style.display === 'none' || panel.style.display === '';
+        panel.style.display = isHidden ? 'flex' : 'none';
+        // 地图面板打开时自动加载地图列表
+        if (panelId === 'panelMap' && isHidden) {
+            loadMapList();
+        }
+    }
+}
+
+// ===== 自定义地图加载与渲染 =====
+let customMaps = null;
+
+// 从localStorage加载地图列表
+function loadMapList() {
+    const data = localStorage.getItem('xiuxian_maps_v2');
+    const select = document.getElementById('mapSelect');
+    if (!data) {
+        select.innerHTML = '<option value="">请先在地图编辑器中保存地图</option>';
+        return;
+    }
+    customMaps = JSON.parse(data);
+    select.innerHTML = '<option value="">选择地图...</option>';
+    for (const id of Object.keys(customMaps)) {
+        const m = customMaps[id];
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = m.name + ' (' + m.width + 'x' + m.height + ')';
+        select.appendChild(opt);
+    }
+}
+
+// 加载地图按钮
+function loadCustomMap() {
+    loadMapList();
+    if (customMaps && Object.keys(customMaps).length > 0) {
+        const firstId = Object.keys(customMaps)[0];
+        document.getElementById('mapSelect').value = firstId;
+        renderCustomMap();
+    } else {
+        alert('没有找到已保存的地图！\n请先打开地图编辑器(editors/map-editor.html)，设计地图后点击"保存"。');
+    }
+}
+
+// 渲染自定义地图到canvas
+function renderCustomMap() {
+    const mapId = document.getElementById('mapSelect').value;
+    if (!mapId || !customMaps || !customMaps[mapId]) return;
+
+    const map = customMaps[mapId];
+    const canvas = document.getElementById('customMapCanvas');
+    const ctx = canvas.getContext('2d');
+    const hint = document.getElementById('mapHint');
+    hint.style.display = 'none';
+
+    // 计算缩放比例，让地图适配canvas
+    const scale = Math.min(canvas.width / map.width, canvas.height / map.height);
+    const offsetX = (canvas.width - map.width * scale) / 2;
+    const offsetY = (canvas.height - map.height * scale) / 2;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+
+    // 宣纸底色
+    ctx.fillStyle = '#f5f0e1';
+    ctx.fillRect(0, 0, map.width, map.height);
+
+    // 预加载素材图片
+    const assetPath = '../assets/images/';
+    const drawAsset = (category, type, x, y, w, h) => {
+        const img = new Image();
+        img.src = assetPath + category + '/' + type + '.png';
+        if (img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, x, y, w, h);
+            return true;
+        }
+        return false;
+    };
+
+    // 地形
+    (map.layers.terrain || []).forEach(t => {
+        if (!drawAsset('terrain', t.type, t.x, t.y, t.w, t.h)) {
+            ctx.fillStyle = '#7a8c5a';
+            ctx.fillRect(t.x, t.y, t.w, t.h);
+        }
+    });
+
+    // 建筑
+    (map.layers.building || []).forEach(b => {
+        if (!drawAsset('building', b.type, b.x, b.y, b.w, b.h)) {
+            ctx.fillStyle = '#8b7355';
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+        }
+    });
+
+    // 装饰
+    (map.layers.decoration || []).forEach(d => {
+        if (!drawAsset('decoration', d.type, d.x, d.y, d.w, d.h)) {
+            ctx.font = '32px serif';
+            ctx.fillText('🌳', d.x + d.w/2, d.y + d.h/2);
+        }
+    });
+
+    // 交互点
+    (map.layers.interact || []).forEach(i => {
+        // 光晕
+        const gradient = ctx.createRadialGradient(i.x+i.w/2, i.y+i.h/2, 5, i.x+i.w/2, i.y+i.h/2, i.w);
+        gradient.addColorStop(0, 'rgba(184,134,11,0.4)');
+        gradient.addColorStop(1, 'rgba(184,134,11,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(i.x-i.w/2, i.y-i.h/2, i.w*2, i.h*2);
+
+        if (!drawAsset('interact', i.type, i.x, i.y, i.w, i.h)) {
+            ctx.beginPath();
+            ctx.arc(i.x+i.w/2, i.y+i.h/2, i.w/2, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(196,69,54,0.3)';
+            ctx.fill();
+            ctx.strokeStyle = '#c44536';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        // 名称
+        ctx.font = '16px KaiTi, serif';
+        ctx.fillStyle = '#2c2c2c';
+        ctx.textAlign = 'center';
+        ctx.fillText(i.name || '', i.x + i.w/2, i.y + i.h + 20);
+    });
+
+    // 地图边框
+    ctx.strokeStyle = '#b8860b';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(0, 0, map.width, map.height);
+
+    ctx.restore();
+}
+
+// 页面加载时自动读取保存的布局
+window.onload = function() {
+    if (localStorage.getItem('xiuxian_ui_layout')) {
+        loadLayout();
+    }
+};
+</script>
+
+</body>
+</html>
